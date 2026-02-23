@@ -1,10 +1,8 @@
-#include <lua.hpp>
 #include <stdio.h>
 
 #include "util.cc"
 #include "fennel-reader.cc"
-
-// --- Entry point ---
+#include "fennel-vm.cc"
 
 int main(int argc, char **argv) {
     FILE *fp;
@@ -18,23 +16,9 @@ int main(int argc, char **argv) {
         fp = stdin;
     }
 
-    lua_State *lua = luaL_newstate();
-    luaL_openlibs(lua);
-
-    if (luaL_loadfile(lua, "lib/fennel-1.6.1.lua") != LUA_OK ||
-        lua_pcall(lua, 0, 1, 0) != LUA_OK) {
-        fprintf(stderr, "diagram: cannot load fennel: %s\n", lua_tostring(lua, -1));
+    lua_State *lua = fennel_init();
+    if (!lua) {
         if (argc > 1) fclose(fp);
-        lua_close(lua);
-        return 1;
-    }
-    lua_setglobal(lua, "__fennel");
-
-    // Persistent environment: globals defined in one form are visible in the next
-    if (luaL_dostring(lua, "__env = setmetatable({}, {__index = _G})") != LUA_OK) {
-        fprintf(stderr, "diagram: cannot create env\n");
-        if (argc > 1) fclose(fp);
-        lua_close(lua);
         return 1;
     }
 
@@ -60,29 +44,10 @@ int main(int argc, char **argv) {
 
         form.data[form.len] = '\0';
 
-        lua_getglobal(lua, "__fennel");
-        lua_getfield(lua, -1, "eval");
-        lua_remove(lua, -2);
-
-        lua_pushstring(lua, form.data);
-
-        lua_newtable(lua);
-        lua_getglobal(lua, "__env");
-        lua_setfield(lua, -2, "env");
-
-        if (lua_pcall(lua, 2, 1, 0) != LUA_OK) {
-            fprintf(stderr, "diagram: %s\n", lua_tostring(lua, -1));
-            lua_pop(lua, 1);
+        if (fennel_eval(lua, form.data) < 0) {
             status = 1;
             break;
         }
-
-        if (lua_isstring(lua, -1)) {
-            size_t rlen;
-            const char *result = lua_tolstring(lua, -1, &rlen);
-            fwrite(result, 1, rlen, stdout);
-        }
-        lua_pop(lua, 1);
     }
 
     buf_free(&form);

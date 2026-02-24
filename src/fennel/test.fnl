@@ -24,12 +24,12 @@
 
 (fn deftest [name & body]
   `(do
-     (fn ,name [] ,(do-block body))
+     (local fn# (fn [] ,(do-block body)))
      (when (= nil (. package.loaded ,state-key))
        (tset package.loaded ,state-key
          {:list [] :pass 0 :fail 0 :errors [] :current nil :ctx nil}))
      (let [st# (. package.loaded ,state-key)]
-       (table.insert st#.list {:name ,(tostring name) :fn ,name}))))
+       (table.insert st#.list {:name ,(tostring name) :fn fn#}))))
 
 (fn is [form ?msg]
   `(let [st# (. package.loaded ,state-key)]

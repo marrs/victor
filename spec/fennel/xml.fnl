@@ -1,7 +1,7 @@
 (import-macros {: deftest : is : run-tests : testing} :src.fennel.test)
 (local xml (require :src.fennel.xml))
 
-(deftest xml->str
+(deftest xml.str
   (testing "self-closing-no-attr-map"
     (is (= (xml.str [:circle]) "<circle/>")))
 

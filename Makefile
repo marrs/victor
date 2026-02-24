@@ -8,7 +8,7 @@ CXXFLAGS = -std=c++17 -Wall -Wextra \
 
 LDLIBS   = $(shell pkg-config --libs freetype2 harfbuzz fontconfig lua5.4)
 
-.PHONY: all clean
+.PHONY: all clean test
 
 all: target $(TARGET)
 
@@ -17,6 +17,9 @@ $(TARGET): $(UNITY)
 
 target:
 	mkdir -p target
+
+test: $(TARGET)
+	$(TARGET) test-assets/test-basic.fnl
 
 clean:
 	rm -f $(TARGET)

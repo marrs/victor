@@ -26,6 +26,18 @@ The codebase is written in a C-style subset of C++:
 - No templates
 - No features that negatively impact compilation time
 
+## Fennel Notes
+
+- Dotted names in `deftest` (e.g. `deftest eps.str`) compile to table field assignment, overwriting the module function and causing infinite recursion. The `deftest` macro binds the test function to a gensym to avoid this.
+- `/` → `:` transformation (for namespaced XML tags/attrs) only applies to globals, not locals. Use dot notation for local variable field access: `xml.str`, not `xml/str`.
+
+## EPS / PS Output
+
+- `src/fennel/eps.fnl` — EPS DSL module with a dispatch table mapping operator keywords to ordered argument lists.
+- EPS DSL mirrors SVG DSL structure: `[:eps {:width w :height h} op1 op2 ...]`
+- Raw EPS cannot be viewed standalone in zathura — the `EPSF-3.0` header causes libspectre to treat it as an embedded document (blank page). Wrap as PS by inserting `showpage` before `%%EOF` via sed. Requires the `zathura-ps` plugin.
+- SVG viewed with `imv-x11`.
+
 ## Naming Conventions
 
 - Single-character variable names are never used — they make searching difficult

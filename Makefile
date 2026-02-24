@@ -1,5 +1,5 @@
 CXX      = g++
-TARGET   = target/diagram
+TARGET   = target/victor
 UNITY    = src/main.cc
 
 CXXFLAGS = -std=c++17 -Wall -Wextra \

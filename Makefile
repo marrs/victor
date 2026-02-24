@@ -8,7 +8,9 @@ CXXFLAGS = -std=c++17 -Wall -Wextra \
 
 LDLIBS   = $(shell pkg-config --libs freetype2 harfbuzz fontconfig lua5.4)
 
-.PHONY: all clean test
+SPECS = $(wildcard spec/fennel/*.fnl)
+
+.PHONY: all clean test $(SPECS)
 
 all: target $(TARGET)
 
@@ -18,7 +20,10 @@ $(TARGET): $(UNITY)
 target:
 	mkdir -p target
 
-test: $(TARGET)
+$(SPECS): $(TARGET)
+	$(TARGET) $@
+
+test: $(TARGET) $(SPECS)
 	$(TARGET) test-assets/test-basic.fnl
 
 clean:

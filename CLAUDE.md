@@ -38,6 +38,26 @@ The codebase is written in a C-style subset of C++:
 - Raw EPS cannot be viewed standalone in zathura — the `EPSF-3.0` header causes libspectre to treat it as an embedded document (blank page). Wrap as PS by inserting `showpage` before `%%EOF` via sed. Requires the `zathura-ps` plugin.
 - SVG viewed with `imv-x11`.
 
+## Error / Warning Convention
+
+Functions that validate or transform return values using one of two conventions:
+
+**Validators** (`validator.validate`, etc.) return a single issue map or `nil`:
+```fennel
+nil                                          ;; valid
+{:level :error   :type :ns/code :msg "..."}  ;; invalid
+{:level :warning :type :ns/code :msg "..."}  ;; valid but suspicious
+```
+
+**Renderers** (`pic.render`, etc.) return a 2-element tuple:
+```fennel
+[nil result]                                 ;; success
+[{:level :warning :type :ns/code :msg "..."} result]  ;; warning — result still produced
+[{:level :error   :type :ns/code :msg "..."} nil]     ;; error — no result
+```
+
+The caller decides how to handle issues (collect warnings, abort on first error, etc.).
+
 ## Naming Conventions
 
 - Single-character variable names are never used — they make searching difficult

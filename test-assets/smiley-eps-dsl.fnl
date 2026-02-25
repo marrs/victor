@@ -39,6 +39,11 @@
    [:moveto {:x 30 :y 40}]
    [:curveto {:x1 43.33 :y1 26.67 :x2 56.67 :y2 26.67 :x3 70 :y3 40}]
    [:setlinewidth {:w 3}]
-   [:stroke]])
+   [:stroke]
+   ;; Caption below face — NanumGothic covers U+263A (☺) with proper post names
+   [:setfont {:name "NanumGothic" :size 8}]
+   [:moveto {:x 8 :y -10}]
+   [:show {:str "Hello, World! "}]
+   [:glyphshow {:name "uni263A"}]])
 
 (print (eps.str smiley))

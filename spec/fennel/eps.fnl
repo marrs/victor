@@ -29,6 +29,22 @@
     (is (thrown? (eps.str [:moveto {:x 10}]))))
 
   (testing "warning on extra keys in hashmap"
-    (is (= (eps.str [:moveto {:x 10 :y 20 :z 99}]) "10 20 moveto"))))
+    (is (= (eps.str [:moveto {:x 10 :y 20 :z 99}]) "10 20 moveto")))
+
+  (testing "setfont emits findfont/scalefont/setfont sequence"
+    (is (= (eps.str [:setfont {:name "Helvetica" :size 14}])
+           "/Helvetica findfont 14 scalefont setfont")))
+
+  (testing "show emits plain PS string literal"
+    (is (= (eps.str [:show {:str "Hi"}])
+           "(Hi) show")))
+
+  (testing "show escapes PS special characters (parens, backslash)"
+    (is (= (eps.str [:show {:str "(ok\\)"}])
+           "(\\050ok\\134\\051) show")))
+
+  (testing "glyphshow emits named glyph operator"
+    (is (= (eps.str [:glyphshow {:name "u1F642"}])
+           "/u1F642 glyphshow"))))
 
 (run-tests)

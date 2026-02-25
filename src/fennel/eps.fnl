@@ -31,6 +31,17 @@
    :rotate        [:angle]
    :scale         [:sx :sy]})
 
+(fn str->ps [s]
+  (let [parts []]
+    (for [idx 1 (length s)]
+      (let [byt (string.byte s idx)]
+        (table.insert parts
+          (if (= byt 0x28) "\\050"
+              (= byt 0x29) "\\051"
+              (= byt 0x5C) "\\134"
+              (string.char byt)))))
+    (.. "(" (table.concat parts "") ")")))
+
 (fn str [node]
   (let [tag       (. node 1)
         second    (. node 2)
@@ -45,6 +56,9 @@
           (table.insert parts (str (. node x))))
         (table.insert parts "%%EOF")
         (table.concat parts "\n"))
+      (= tag :setfont)   (.. "/" attrs.name " findfont " attrs.size " scalefont setfont")
+      (= tag :show)      (.. (str->ps attrs.str) " show")
+      (= tag :glyphshow) (.. "/" attrs.name " glyphshow")
       (let [arg-keys (. ops tag)]
         (when (= nil arg-keys)
           (error (.. "eps: unknown operator: " (tostring tag))))

@@ -8,4 +8,21 @@
     50  51    ;; near-halfway: odd height exposes rounding errors
     30  71))  ;; arbitrary value
 
+(deftest render
+  (testing "rect → SVG")
+
+  (testing "rect with rx → SVG passthrough")
+
+  (testing "circle → SVG")
+
+  (testing "rect → EPS with y-flip")
+
+  (testing "rect with rx → EPS path decomposition")
+
+  (testing "circle → EPS with y-flip")
+
+  (testing "document wrapper → SVG")
+
+  (testing "document wrapper → EPS"))
+
 (run-tests)

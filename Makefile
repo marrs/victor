@@ -41,9 +41,21 @@ target/smiley-eps-dsl.eps: test-assets/smiley-eps-dsl.fnl $(TARGET) | target
 target/smiley-eps-dsl.ps: target/smiley-eps-dsl.eps
 	sed 's/%%EOF/showpage\n%%EOF/' $< > $@
 
-smoketest: target/smiley-svg-dsl.svg target/smiley-eps-dsl.ps
+target/smiley-pic-svg.svg: test-assets/smiley-pic-svg.fnl $(TARGET) | target
+	$(TARGET) $< > $@
+
+target/smiley-pic-eps.eps: test-assets/smiley-pic-eps.fnl $(TARGET) | target
+	$(TARGET) $< > $@
+
+target/smiley-pic-eps.ps: target/smiley-pic-eps.eps
+	sed 's/%%EOF/showpage\n%%EOF/' $< > $@
+
+smoketest: target/smiley-svg-dsl.svg target/smiley-eps-dsl.ps \
+           target/smiley-pic-svg.svg target/smiley-pic-eps.ps
 	$(SVG_VIEWER) target/smiley-svg-dsl.svg &
-	$(EPS_VIEWER) target/smiley-eps-dsl.ps
+	$(SVG_VIEWER) target/smiley-pic-svg.svg &
+	$(EPS_VIEWER) target/smiley-eps-dsl.ps &
+	$(EPS_VIEWER) target/smiley-pic-eps.ps
 
 clean:
 	rm -f $(TARGET)

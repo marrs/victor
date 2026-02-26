@@ -11,11 +11,19 @@ static int l_glyph_name(lua_State *lua)
 
     String_Result res = glyph_name(font_name, codepoint);
 
-    if (res.err.level) {
+    const char *level_str;
+    switch (res.err.level) {
+        case LOG_ERROR:   level_str = "error";   break;
+        case LOG_WARNING: level_str = "warning"; break;
+        case LOG_INFO:    level_str = "info";    break;
+        default:          level_str = nullptr;   break;
+    }
+
+    if (level_str) {
         lua_newtable(lua);
-        lua_pushstring(lua, res.err.level);
+        lua_pushstring(lua, level_str);
         lua_setfield(lua, -2, "level");
-        lua_pushstring(lua, res.err.type);
+        lua_pushstring(lua, res.err.code);
         lua_setfield(lua, -2, "type");
         lua_pushstring(lua, res.err.msg);
         lua_setfield(lua, -2, "msg");

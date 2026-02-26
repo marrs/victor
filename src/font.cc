@@ -2,12 +2,22 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 #include <stdint.h>
+#include <string.h>
 
 static String_Result glyph_name(const char *font_name, uint32_t codepoint)
 {
     // Static buffers — single-threaded tool
     static char name_buf[256];
     static char msg_buf[256];
+
+    // Reject font names with spaces — PostScript name tokens cannot contain spaces
+    if (strchr(font_name, ' ')) {
+        snprintf(msg_buf, sizeof(msg_buf),
+                 "PostScript name tokens cannot contain spaces: %s", font_name);
+        String_Result res = string_result(LOG_WARNING, "font/name-has-spaces", msg_buf, "");
+        print_err(res);
+        return res;
+    }
 
     // Compute AGL name from codepoint
     if (codepoint <= 0xFFFF) {

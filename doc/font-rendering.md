@@ -28,35 +28,56 @@ output avoids this issue entirely since no font data is included.
 
 Victor will issue a warning to stderr when vectorising fonts.
 
-## Unicode: always UTF-16BE via CIDFont
+## Unicode: `show` for ASCII runs, `glyphshow` for individual non-ASCII glyphs
 
 PostScript's traditional encoding vectors map byte values 0–255 to glyph
-names. This is insufficient for Unicode. The correct PostScript solution is
-**CIDFonts** with the **Identity-H** CMap, which maps UTF-16BE byte pairs
-directly to glyph IDs:
+names. This is sufficient for ASCII but not for Unicode.
 
-```postscript
-/FontName findfont /Identity-H composefont 14 scalefont setfont
-50 60 moveto
-(\x00H\x00e\x00l\x00l\x00o) show
-```
+The approach used here splits text at the caller level (the layer that
+compiles the high-level diagram DSL to the EPS DSL):
 
-An alternative is to split strings into ASCII and non-ASCII runs, using a
-cheap 8-bit encoding for ASCII and CIDFont only for non-ASCII characters.
-This was rejected:
+- **ASCII runs** are emitted as a plain PS string literal with `show`:
 
-- **Space saving is negligible.** At 100 words of diagram text per 5 pages (all
-  ASCII, worst case), the UTF-16BE overhead is ~2 KB uncompressed and ~150
-  bytes compressed. Even at 500 pages this is trivial compared to diagram
-  geometry data.
-- **Complexity is not trivial.** Run-splitting requires font-switching between
-  segments and risks metric mismatches at join points if the interpreter
-  resolves the two font objects to different underlying data.
-- **Uniformity.** A single code path for all text is easier to reason about and
-  test.
+  ```postscript
+  /Helvetica findfont 14 scalefont setfont
+  50 60 moveto
+  (Hello, World! ) show
+  ```
 
-UTF-16BE is used throughout. The Fennel/Lua layer converts UTF-8 input
-strings to UTF-16BE before embedding them in EPS output.
+- **Individual non-ASCII codepoints** are emitted by glyph name with
+  `glyphshow`. The caller is responsible for looking up the Adobe Glyph List
+  name for the codepoint (`uniXXXX` for BMP, `uXXXXX` for supplementary):
+
+  ```postscript
+  /uni263A glyphshow
+  ```
+
+  `glyphshow` bypasses the font's encoding vector and addresses the glyph
+  directly by name. It works for any font that carries a `post` table with
+  standard AGL names — which is true of well-formed OpenType/TrueType fonts.
+
+### Why not CIDFont + Identity-H?
+
+The canonical PostScript Unicode solution is `composefont` with the
+`Identity-H` CMap, which maps UTF-16BE byte pairs directly to glyph IDs.
+This was rejected for two reasons:
+
+1. **Runtime dependency.** `composefont` requires a CIDFont resource to be
+   registered with GhostScript. No stock Debian GhostScript installation
+   provides usable CIDFont resources for common Latin or emoji fonts; the
+   `composefont` call raises `typecheck in composefontdict` at runtime.
+2. **DSL statelessness.** The EPS DSL emits independent operator nodes;
+   `:setfont` and `:show` cannot share encoding state. A re-encoded Type 42
+   wrapper would have to be embedded inline at the `:setfont` site with no
+   coordination possible at the `:show` site.
+
+### Glyph name coverage
+
+`glyphshow` requires the font to expose the glyph under its AGL name. Fonts
+without a `post` table (or with a format-3 `post` that omits names) cause
+GhostScript to synthesise names of the form `_NNNN` (glyph index), which
+do not match AGL names. The C++ layer must verify glyph-name coverage before
+emitting a `:glyphshow` node and fall back gracefully when the name is absent.
 
 ## Features deferred
 

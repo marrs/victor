@@ -5,7 +5,7 @@
 All new features follow a 3-stage workflow:
 
 1. **Spec descriptions** — Write test descriptions with empty bodies. Wait for user approval before proceeding.
-2. **Spec bodies** — Write the test implementations. Wait for user approval before proceeding.
+2. **Spec bodies** — Write the test implementations and stubs for any new functions under test (so tests fail rather than crash). Wait for user approval before proceeding.
 3. **Implementation** — Write code until all tests pass.
 
 Do not edit tests after they have been approved without explicitly asking the user for permission first.

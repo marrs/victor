@@ -1,6 +1,8 @@
 #include <stdio.h>
 
 #include "util.cc"
+#include "buf.cc"
+#include "font.cc"
 #include "fennel-reader.cc"
 #include "fennel-vm.cc"
 

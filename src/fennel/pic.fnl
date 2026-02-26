@@ -22,7 +22,13 @@
             [:r            number?]
             [:fill         {:optional true} string?]
             [:stroke       {:optional true} string?]
-            [:stroke-width {:optional true} number?]]})
+            [:stroke-width {:optional true} number?]]
+   :text   [:map
+            [:x    number?]
+            [:y    number?]
+            [:font string?]
+            [:size number?]
+            [:str  string?]]})
 
 ;;; Color
 
@@ -106,6 +112,39 @@
                    (when attrs.stroke-width
                      (table.insert nodes [:setlinewidth {:w attrs.stroke-width}]))
                    (table.insert nodes [:rectstroke {:x xx :y yeps :w ww :h hh}]))))
+             [nil nodes]))}
+
+   :text
+   {:svg (fn [attrs _ctx]
+           [nil [[:text {:x          attrs.x
+                         :y          attrs.y
+                         :font-family attrs.font
+                         :font-size  attrs.size}
+                  attrs.str]]])
+    :eps (fn [attrs ctx]
+           (let [nodes []
+                 yeps  (eps-y ctx.height attrs.y)]
+             (table.insert nodes [:setfont {:name attrs.font :size attrs.size}])
+             (table.insert nodes [:moveto {:x attrs.x :y yeps}])
+             (var run [])
+             (fn flush-run []
+               (when (> (length run) 0)
+                 (table.insert nodes [:show {:str (table.concat run)}])
+                 (set run [])))
+             (each [_ cp (utf8.codes attrs.str)]
+               (if (and (>= cp 0x20) (<= cp 0x7E))
+                 (table.insert run (string.char cp))
+                 (do
+                   (flush-run)
+                   (let [(err name) (glyph_name attrs.font cp)
+                         agl-name  (if (<= cp 0xFFFF)
+                                     (string.format "uni%04X" cp)
+                                     (string.format "u%X" cp))
+                         gname     (if (or (not name) (= name ""))
+                                     agl-name
+                                     name)]
+                     (table.insert nodes [:glyphshow {:name gname}])))))
+             (flush-run)
              [nil nodes]))}
 
    :circle

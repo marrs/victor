@@ -93,6 +93,64 @@
     (let [[issue result] (pic.render {:target :eps}
                                      [:pic {:width 200 :height 100}])]
       (is (nil? issue))
-      (is (deep= [:eps {:width 200 :height 100}] result)))))
+      (is (deep= [:eps {:width 200 :height 100}] result))))
+
+  (testing "text → SVG"
+    (let [[issue result] (pic.render {:target :svg}
+                                     [:pic {:width 200 :height 100}
+                                      [:text {:x 10 :y 20 :font "FreeSans" :size 12
+                                              :str "Hello"}]])]
+      (is (nil? issue))
+      (is (deep= (svg {} [:text {:x 10 :y 20 :font-family "FreeSans"
+                                 :font-size 12} "Hello"])
+                 result))))
+
+  (testing "text → SVG: non-ASCII character passes through as UTF-8"
+    (let [[issue result] (pic.render {:target :svg}
+                                     [:pic {:width 200 :height 100}
+                                      [:text {:x 10 :y 20 :font "FreeSans" :size 12
+                                              :str "☺"}]])]
+      (is (nil? issue))
+      (is (deep= (svg {} [:text {:x 10 :y 20 :font-family "FreeSans"
+                                 :font-size 12} "☺"])
+                 result))))
+
+  (testing "text → EPS: ASCII-only string"
+    (let [[issue result] (pic.render {:target :eps}
+                                     [:pic {:width 200 :height 100}
+                                      [:text {:x 10 :y 20 :font "FreeSans" :size 12
+                                              :str "Hi"}]])]
+      (is (nil? issue))
+      (is (deep= [:eps {:width 200 :height 100}
+                  [:setfont {:name "FreeSans" :size 12}]
+                  [:moveto {:x 10 :y (pic.eps-y 100 20)}]
+                  [:show {:str "Hi"}]]
+                 result))))
+
+  (testing "text → EPS: non-ASCII codepoint emits glyphshow with post table name"
+    (let [[issue result] (pic.render {:target :eps}
+                                     [:pic {:width 200 :height 100}
+                                      [:text {:x 10 :y 20 :font "FreeSans" :size 12
+                                              :str "☺"}]])]
+      (is (nil? issue))
+      (is (deep= [:eps {:width 200 :height 100}
+                  [:setfont {:name "FreeSans" :size 12}]
+                  [:moveto {:x 10 :y (pic.eps-y 100 20)}]
+                  [:glyphshow {:name "smileface"}]]
+                 result))))
+
+  (testing "text → EPS: mixed ASCII and non-ASCII"
+    (let [[issue result] (pic.render {:target :eps}
+                                     [:pic {:width 200 :height 100}
+                                      [:text {:x 10 :y 20 :font "FreeSans" :size 12
+                                              :str "A☺B"}]])]
+      (is (nil? issue))
+      (is (deep= [:eps {:width 200 :height 100}
+                  [:setfont {:name "FreeSans" :size 12}]
+                  [:moveto {:x 10 :y (pic.eps-y 100 20)}]
+                  [:show {:str "A"}]
+                  [:glyphshow {:name "smileface"}]
+                  [:show {:str "B"}]]
+                 result)))))
 
 (run-tests)

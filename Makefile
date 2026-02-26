@@ -9,6 +9,7 @@ CXXFLAGS = -std=c++17 -Wall -Wextra \
 LDLIBS   = $(shell pkg-config --libs freetype2 harfbuzz fontconfig lua5.4)
 
 SPECS = $(wildcard spec/fennel/*.fnl)
+SPEC  = target/spec
 
 SVG_VIEWER = imv-x11
 EPS_VIEWER = zathura
@@ -20,13 +21,17 @@ all: target $(TARGET)
 $(TARGET): $(UNITY)
 	$(CXX) $(CXXFLAGS) $< $(LDLIBS) -o $@
 
+$(SPEC): spec/main.cc | target
+	$(CXX) $(CXXFLAGS) $< $(LDLIBS) -o $@
+
 target:
 	mkdir -p target
 
 $(SPECS): $(TARGET)
 	$(TARGET) $@
 
-test: $(TARGET) $(SPECS)
+test: $(SPEC) $(TARGET) $(SPECS)
+	$(SPEC)
 	$(TARGET) test-assets/test-basic.fnl
 
 target/smiley-svg-dsl.svg: test-assets/smiley-svg-dsl.fnl $(TARGET) | target

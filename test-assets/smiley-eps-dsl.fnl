@@ -41,9 +41,9 @@
    [:setlinewidth {:w 3}]
    [:stroke]
    ;; Caption below face — NanumGothic covers U+263A (☺) with proper post names
-   [:setfont {:name "NanumGothic" :size 8}]
+   [:setfont {:name "FreeSans" :size 8}]
    [:moveto {:x 8 :y -10}]
    [:show {:str "Hello, World! "}]
-   [:glyphshow {:name "uni263A"}]])
+   [:glyphshow {:name "smileface"}]])
 
 (print (eps.str smiley))

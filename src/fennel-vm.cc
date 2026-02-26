@@ -1,5 +1,36 @@
 #include <lua.hpp>
+#include <stdint.h>
 #include <stdio.h>
+
+// Lua binding for glyph_name(font_name, codepoint) → err, result
+// Pushes two values: err (nil or table) and result (string or nil)
+static int l_glyph_name(lua_State *lua)
+{
+    const char *font_name = luaL_checkstring(lua, 1);
+    uint32_t    codepoint = (uint32_t)luaL_checkinteger(lua, 2);
+
+    String_Result res = glyph_name(font_name, codepoint);
+
+    if (res.err.level) {
+        lua_newtable(lua);
+        lua_pushstring(lua, res.err.level);
+        lua_setfield(lua, -2, "level");
+        lua_pushstring(lua, res.err.type);
+        lua_setfield(lua, -2, "type");
+        lua_pushstring(lua, res.err.msg);
+        lua_setfield(lua, -2, "msg");
+    } else {
+        lua_pushnil(lua);
+    }
+
+    if (res.result) {
+        lua_pushstring(lua, res.result);
+    } else {
+        lua_pushnil(lua);
+    }
+
+    return 2;
+}
 
 // Initialise a Lua state with standard libs and Fennel loaded.
 // Returns the state on success, NULL on error.
@@ -36,6 +67,9 @@ static lua_State *fennel_init() {
         lua_close(lua);
         return NULL;
     }
+
+    lua_pushcfunction(lua, l_glyph_name);
+    lua_setglobal(lua, "glyph_name");
 
     return lua;
 }

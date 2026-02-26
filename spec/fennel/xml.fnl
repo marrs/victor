@@ -36,6 +36,28 @@
     (is (= (xml.str [:svg {} [:circle {}] [:rect {}]]) "<svg><circle/><rect/></svg>")))
 
   (testing "multiple-mixed-children"
-    (is (= (xml.str [:p {} "hello" [:em {} "world"]]) "<p>hello<em>world</em></p>"))))
+    (is (= (xml.str [:p {} "hello" [:em {} "world"]]) "<p>hello<em>world</em></p>")))
+
+  (testing "text element with content"
+    (is (= (xml.str [:text {} "Hello"]) "<text>Hello</text>")))
+
+  (testing "text element with font attributes"
+    (is (= (xml.str [:text {:x "10" :y "20" :font-family "Helvetica" :font-size "12"} "Hello"])
+           "<text font-family=\"Helvetica\" font-size=\"12\" x=\"10\" y=\"20\">Hello</text>")))
+
+  (testing "text content escapes ampersand"
+    (is (= (xml.str [:text {} "a & b"]) "<text>a &amp; b</text>")))
+
+  (testing "text content escapes less-than"
+    (is (= (xml.str [:text {} "a < b"]) "<text>a &lt; b</text>")))
+
+  (testing "text content escapes greater-than"
+    (is (= (xml.str [:text {} "a > b"]) "<text>a &gt; b</text>")))
+
+  (testing "attr value escapes ampersand"
+    (is (= (xml.str [:circle {:fill "a&b"}]) "<circle fill=\"a&amp;b\"/>")))
+
+  (testing "attr value escapes double-quote"
+    (is (= (xml.str [:circle {:fill "a\"b"}]) "<circle fill=\"a&quot;b\"/>"))))
 
 (run-tests)

@@ -2,6 +2,13 @@
   (let [result (string.gsub (tostring kw) "/" ":")]
     result))
 
+(fn escape [ss]
+  (let [s1 (string.gsub ss  "&"  "&amp;")
+        s2 (string.gsub s1  "<"  "&lt;")
+        s3 (string.gsub s2  ">"  "&gt;")
+        s4 (string.gsub s3  "\"" "&quot;")]
+    s4))
+
 (fn render-attrs [attrs]
   (let [keys []]
     (each [kk _ (pairs attrs)]
@@ -9,7 +16,7 @@
     (table.sort keys (fn [aa bb] (< (tostring aa) (tostring bb))))
     (let [parts []]
       (each [_ kk (ipairs keys)]
-        (table.insert parts (.. (kw->name kk) "=\"" (tostring (. attrs kk)) "\"")))
+        (table.insert parts (.. (kw->name kk) "=\"" (escape (tostring (. attrs kk))) "\"")))
       (table.concat parts " "))))
 
 (fn str [node]
@@ -26,7 +33,7 @@
                           (table.insert parts
                             (if (= :table (type child))
                               (str child)
-                              (tostring child)))))
+                              (escape (tostring child))))))
                       (table.concat parts ""))]
     (if (= body "")
       (.. "<" open "/>")

@@ -11,7 +11,7 @@ LDLIBS   = $(shell pkg-config --libs freetype2 harfbuzz fontconfig lua5.4)
 SPECS     = $(wildcard spec/fennel/*.fnl)
 SPEC      = target/spec
 SRC_FILES = $(wildcard src/*.cc src/*.h)
-SPEC_FILES = spec/main.cc spec/test.h $(SRC_FILES)
+SPEC_FILES = spec/main.cc spec/font.cc spec/font-mocks.h spec/test.h $(SRC_FILES)
 
 SVG_VIEWER = imv-x11 -b checks
 EPS_VIEWER = zathura
@@ -24,7 +24,7 @@ $(TARGET): $(SRC_FILES) | target
 	$(CXX) $(CXXFLAGS) $(UNITY) $(LDLIBS) -o $@
 
 $(SPEC): $(SPEC_FILES) | target
-	$(CXX) $(CXXFLAGS) spec/main.cc $(LDLIBS) -o $@
+	$(CXX) $(CXXFLAGS) spec/main.cc -o $@
 
 target:
 	mkdir -p target

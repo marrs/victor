@@ -5,6 +5,7 @@
 #include "font.cc"
 #include "fennel-reader.cc"
 #include "fennel-vm.cc"
+#include "groff.cc"
 
 int main(int argc, char **argv) {
     lua_State *lua = fennel_init();
@@ -13,7 +14,16 @@ int main(int argc, char **argv) {
     int status = 0;
 
     if (argc > 1) {
-        status = (fennel_dofile(lua, argv[1]) < 0) ? 1 : 0;
+        if (strcmp(argv[1], "groff") == 0) {
+            if (argc < 3) {
+                fprintf(stderr, "Usage: victor groff <file>\n");
+                status = 1;
+            } else {
+                status = process_groff(lua, argv[2]) < 0 ? 1 : 0;
+            }
+        } else {
+            status = (fennel_dofile(lua, argv[1]) < 0) ? 1 : 0;
+        }
     } else {
         Buf form;
         if (buf_init(&form) < 0) {

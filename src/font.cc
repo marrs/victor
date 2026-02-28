@@ -15,7 +15,7 @@ static String_Result glyph_name(const char *font_name, uint32_t codepoint)
         snprintf(msg_buf, sizeof(msg_buf),
                  "PostScript name tokens cannot contain spaces: %s", font_name);
         String_Result res = string_result(LOG_WARNING, "font/name-has-spaces", msg_buf, "");
-        print_err(res);
+        print_err("glyph_name", res);
         return res;
     }
 
@@ -33,7 +33,7 @@ static String_Result glyph_name(const char *font_name, uint32_t codepoint)
     if (!pat) {
         snprintf(msg_buf, sizeof(msg_buf), "FcNameParse failed for: %s", font_name);
         String_Result res = string_result(LOG_ERROR, "font/fc-parse-failed", msg_buf, nullptr);
-        print_err(res);
+        print_err("glyph_name", res);
         return res;
     }
 
@@ -41,7 +41,7 @@ static String_Result glyph_name(const char *font_name, uint32_t codepoint)
         FcPatternDestroy(pat);
         snprintf(msg_buf, sizeof(msg_buf), "FcConfigSubstitute failed for: %s", font_name);
         String_Result res = string_result(LOG_ERROR, "font/fc-substitute-failed", msg_buf, nullptr);
-        print_err(res);
+        print_err("glyph_name", res);
         return res;
     }
     FcDefaultSubstitute(pat);
@@ -53,7 +53,7 @@ static String_Result glyph_name(const char *font_name, uint32_t codepoint)
     if (!match) {
         snprintf(msg_buf, sizeof(msg_buf), "FcFontMatch failed for: %s", font_name);
         String_Result res = string_result(LOG_ERROR, "font/fc-match-failed", msg_buf, nullptr);
-        print_err(res);
+        print_err("glyph_name", res);
         return res;
     }
 
@@ -64,7 +64,7 @@ static String_Result glyph_name(const char *font_name, uint32_t codepoint)
         FcPatternDestroy(match);
         snprintf(msg_buf, sizeof(msg_buf), "no family name in match for: %s", font_name);
         String_Result res = string_result(LOG_ERROR, "font/fc-no-family", msg_buf, nullptr);
-        print_err(res);
+        print_err("glyph_name", res);
         return res;
     }
     if (FcStrCmpIgnoreCase(matched_family, (const FcChar8 *)font_name) != 0) {
@@ -72,7 +72,7 @@ static String_Result glyph_name(const char *font_name, uint32_t codepoint)
         snprintf(msg_buf, sizeof(msg_buf),
                  "font not found: %s (closest match: %s)", font_name, matched_family);
         String_Result res = string_result(LOG_ERROR, "font/not-found", msg_buf, nullptr);
-        print_err(res);
+        print_err("glyph_name", res);
         return res;
     }
 
@@ -81,7 +81,7 @@ static String_Result glyph_name(const char *font_name, uint32_t codepoint)
         FcPatternDestroy(match);
         snprintf(msg_buf, sizeof(msg_buf), "no file path in match for: %s", font_name);
         String_Result res = string_result(LOG_ERROR, "font/fc-no-filepath", msg_buf, nullptr);
-        print_err(res);
+        print_err("glyph_name", res);
         return res;
     }
 
@@ -92,7 +92,7 @@ static String_Result glyph_name(const char *font_name, uint32_t codepoint)
         FcPatternDestroy(match);
         snprintf(msg_buf, sizeof(msg_buf), "FT_Init_FreeType failed: %d", ft_err);
         String_Result res = string_result(LOG_ERROR, "font/ft-init-failed", msg_buf, nullptr);
-        print_err(res);
+        print_err("glyph_name", res);
         return res;
     }
 
@@ -103,7 +103,7 @@ static String_Result glyph_name(const char *font_name, uint32_t codepoint)
         FT_Done_FreeType(ft);
         snprintf(msg_buf, sizeof(msg_buf), "FT_New_Face failed (%d): %s", ft_err, font_name);
         String_Result res = string_result(LOG_ERROR, "font/ft-open-failed", msg_buf, nullptr);
-        print_err(res);
+        print_err("glyph_name", res);
         return res;
     }
 
@@ -123,7 +123,7 @@ static String_Result glyph_name(const char *font_name, uint32_t codepoint)
         snprintf(msg_buf, sizeof(msg_buf),
                  "codepoint U+%04X absent from font %s", codepoint, font_name);
         String_Result res = string_result(LOG_WARNING, "font/glyph-absent", msg_buf, "");
-        print_err(res);
+        print_err("glyph_name", res);
         return res;
     }
 
@@ -139,7 +139,7 @@ static String_Result glyph_name(const char *font_name, uint32_t codepoint)
         snprintf(msg_buf, sizeof(msg_buf),
                  "post table name for U+%04X in %s", codepoint, font_name);
         String_Result res = string_result(LOG_INFO, "font/post-name", msg_buf, name_buf);
-        print_err(res);
+        print_err("glyph_name", res);
         return res;
     }
 
@@ -150,6 +150,6 @@ static String_Result glyph_name(const char *font_name, uint32_t codepoint)
              "no post table name for U+%04X in %s, using AGL fallback",
              codepoint, font_name);
     String_Result res = string_result(LOG_WARNING, "font/no-post-name", msg_buf, name_buf);
-    print_err(res);
+    print_err("glyph_name", res);
     return res;
 }

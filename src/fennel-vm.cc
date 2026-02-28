@@ -40,6 +40,23 @@ static int l_glyph_name(lua_State *lua)
     return 2;
 }
 
+// Evaluate a Fennel form using __env. Leaves string result on the Lua stack.
+// Returns 0 on success, -1 on error (pops error from stack and logs it).
+static int fennel_eval_retain(lua_State *lua, const char *form)
+{
+    lua_getglobal(lua, "__fennel");
+    lua_getfield(lua, -1, "eval");
+    lua_remove(lua, -2);
+    lua_pushstring(lua, form);
+    lua_newtable(lua);
+    lua_getglobal(lua, "__env");
+    lua_setfield(lua, -2, "env");
+    if (lua_pcall(lua, 2, 1, 0) != LUA_OK) {
+        return -1;  // error message left on stack for caller
+    }
+    return 0;  // result left on stack
+}
+
 // Initialise a Lua state with standard libs and Fennel loaded.
 // Returns the state on success, NULL on error.
 static lua_State *fennel_init() {

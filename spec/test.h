@@ -10,6 +10,9 @@ static char test_pad2[] = "    ";
 static char test_pad3[] = "      ";
 static char test_pad4[] = "        ";
 static char test_pad5[] = "          ";
+static char test_pad6[] = "            ";
+static char test_pad7[] = "              ";
+static char test_pad8[] = "                ";
 char *test_padding[] = {
     test_pad0,
     test_pad1,
@@ -17,6 +20,9 @@ char *test_padding[] = {
     test_pad3,
     test_pad4,
     test_pad5,
+    test_pad6,
+    test_pad7,
+    test_pad8,
 };
 int test_padlen = 0;
 int passing_tests = 0;
@@ -72,6 +78,17 @@ void expect_int_eq(const int v1, const int v2)
     } else {
         ++failing_tests;
         printf("\n%s  ❌ Expected \"%d\" to equal \"%d\"\n", test_padding[test_padlen], v1, v2);
+    }
+}
+
+void expect_str_contains(const char *haystack, const char *needle)
+{
+    if (strstr(haystack, needle) != nullptr) {
+        pass();
+    } else {
+        ++failing_tests;
+        printf("\n%s  ❌ Expected \"%s\" to contain \"%s\"\n",
+               test_padding[test_padlen], haystack, needle);
     }
 }
 

@@ -181,8 +181,8 @@
   (let [tag    (. node 1)
         attrs  (. node 2)
         target opts.target]
-    (when (not= tag :pic)
-      (error (.. "pic: expected :pic tag, got " (tostring tag))))
+    (when (not= tag :bic)
+      (error (.. "bic: expected :bic tag, got " (tostring tag))))
     (let [ctx      {:width attrs.width :height attrs.height}
           children []]
       (var issue nil)
@@ -193,7 +193,7 @@
               prim-schema (. schema prim-tag)]
           (when (= nil prim-schema)
             (set issue {:level :error
-                        :type  :pic/unknown-primitive
+                        :type  :bic/unknown-primitive
                         :msg   (.. "unknown primitive: " (tostring prim-tag))}))
           (when (= nil issue)
             (let [val-issue (validator.validate prim-schema prim-attrs)]

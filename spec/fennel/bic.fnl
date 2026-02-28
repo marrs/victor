@@ -1,5 +1,5 @@
 (import-macros {: deftest : is : run-tests : testing : are} :src.fennel.test)
-(local pic (require :src.fennel.pic))
+(local bic (require :src.fennel.bic))
 (local {: nil? : deep=} (require :src.fennel.core))
 
 (fn svg [attrs ...]
@@ -11,8 +11,8 @@
       (table.insert node child))
     node))
 
-(deftest pic.eps-y
-  (are [y result] (= result (pic.eps-y 101 y))
+(deftest bic.eps-y
+  (are [y result] (= result (bic.eps-y 101 y))
     0   101   ;; SVG origin maps to top of EPS page
     101 0     ;; SVG bottom maps to EPS origin
     50  51    ;; near-halfway: odd height exposes rounding errors
@@ -20,32 +20,32 @@
 
 (deftest render
   (testing "rect → SVG"
-    (let [[issue result] (pic.render {:target :svg}
-                                     [:pic {:width 200 :height 100}
+    (let [[issue result] (bic.render {:target :svg}
+                                     [:bic {:width 200 :height 100}
                                       [:rect {:x 10 :y 20 :width 80 :height 40}]])]
       (is (nil? issue))
       (is (deep= (svg {} [:rect {:x 10 :y 20 :width 80 :height 40}])
                  result))))
 
   (testing "rect with rx → SVG passthrough"
-    (let [[issue result] (pic.render {:target :svg}
-                                     [:pic {:width 200 :height 100}
+    (let [[issue result] (bic.render {:target :svg}
+                                     [:bic {:width 200 :height 100}
                                       [:rect {:x 10 :y 20 :width 80 :height 40 :rx 8}]])]
       (is (nil? issue))
       (is (deep= (svg {} [:rect {:x 10 :y 20 :width 80 :height 40 :rx 8}])
                  result))))
 
   (testing "circle → SVG"
-    (let [[issue result] (pic.render {:target :svg}
-                                     [:pic {:width 200 :height 100}
+    (let [[issue result] (bic.render {:target :svg}
+                                     [:bic {:width 200 :height 100}
                                       [:circle {:cx 50 :cy 50 :r 30}]])]
       (is (nil? issue))
       (is (deep= (svg {} [:circle {:cx 50 :cy 50 :r 30}])
                  result))))
 
   (testing "rect → EPS with y-flip"
-    (let [[issue result] (pic.render {:target :eps}
-                                     [:pic {:width 200 :height 100}
+    (let [[issue result] (bic.render {:target :eps}
+                                     [:bic {:width 200 :height 100}
                                       [:rect {:x 10 :y 20 :width 80 :height 40}]])]
       (is (nil? issue))
       (is (deep= [:eps {:width 200 :height 100}
@@ -53,8 +53,8 @@
                  result))))
 
   (testing "rect with rx → EPS path decomposition"
-    (let [[issue result] (pic.render {:target :eps}
-                                     [:pic {:width 200 :height 100}
+    (let [[issue result] (bic.render {:target :eps}
+                                     [:bic {:width 200 :height 100}
                                       [:rect {:x 10 :y 20 :width 80 :height 40 :rx 8}]])]
       (is (nil? issue))
       (is (deep= [:eps {:width 200 :height 100}
@@ -73,8 +73,8 @@
                  result))))
 
   (testing "circle → EPS with y-flip"
-    (let [[issue result] (pic.render {:target :eps}
-                                     [:pic {:width 200 :height 100}
+    (let [[issue result] (bic.render {:target :eps}
+                                     [:bic {:width 200 :height 100}
                                       [:circle {:cx 50 :cy 30 :r 20}]])]
       (is (nil? issue))
       (is (deep= [:eps {:width 200 :height 100}
@@ -84,20 +84,20 @@
                  result))))
 
   (testing "document wrapper → SVG"
-    (let [[issue result] (pic.render {:target :svg}
-                                     [:pic {:width 200 :height 100}])]
+    (let [[issue result] (bic.render {:target :svg}
+                                     [:bic {:width 200 :height 100}])]
       (is (nil? issue))
       (is (deep= (svg {}) result))))
 
   (testing "document wrapper → EPS"
-    (let [[issue result] (pic.render {:target :eps}
-                                     [:pic {:width 200 :height 100}])]
+    (let [[issue result] (bic.render {:target :eps}
+                                     [:bic {:width 200 :height 100}])]
       (is (nil? issue))
       (is (deep= [:eps {:width 200 :height 100}] result))))
 
   (testing "text → SVG"
-    (let [[issue result] (pic.render {:target :svg}
-                                     [:pic {:width 200 :height 100}
+    (let [[issue result] (bic.render {:target :svg}
+                                     [:bic {:width 200 :height 100}
                                       [:text {:x 10 :y 20 :font "FreeSans" :size 12
                                               :str "Hello"}]])]
       (is (nil? issue))
@@ -106,8 +106,8 @@
                  result))))
 
   (testing "text → SVG: non-ASCII character passes through as UTF-8"
-    (let [[issue result] (pic.render {:target :svg}
-                                     [:pic {:width 200 :height 100}
+    (let [[issue result] (bic.render {:target :svg}
+                                     [:bic {:width 200 :height 100}
                                       [:text {:x 10 :y 20 :font "FreeSans" :size 12
                                               :str "☺"}]])]
       (is (nil? issue))
@@ -116,38 +116,38 @@
                  result))))
 
   (testing "text → EPS: ASCII-only string"
-    (let [[issue result] (pic.render {:target :eps}
-                                     [:pic {:width 200 :height 100}
+    (let [[issue result] (bic.render {:target :eps}
+                                     [:bic {:width 200 :height 100}
                                       [:text {:x 10 :y 20 :font "FreeSans" :size 12
                                               :str "Hi"}]])]
       (is (nil? issue))
       (is (deep= [:eps {:width 200 :height 100}
                   [:setfont {:name "FreeSans" :size 12}]
-                  [:moveto {:x 10 :y (pic.eps-y 100 20)}]
+                  [:moveto {:x 10 :y (bic.eps-y 100 20)}]
                   [:show {:str "Hi"}]]
                  result))))
 
   (testing "text → EPS: non-ASCII codepoint emits glyphshow with post table name"
-    (let [[issue result] (pic.render {:target :eps}
-                                     [:pic {:width 200 :height 100}
+    (let [[issue result] (bic.render {:target :eps}
+                                     [:bic {:width 200 :height 100}
                                       [:text {:x 10 :y 20 :font "FreeSans" :size 12
                                               :str "☺"}]])]
       (is (nil? issue))
       (is (deep= [:eps {:width 200 :height 100}
                   [:setfont {:name "FreeSans" :size 12}]
-                  [:moveto {:x 10 :y (pic.eps-y 100 20)}]
+                  [:moveto {:x 10 :y (bic.eps-y 100 20)}]
                   [:glyphshow {:name "smileface"}]]
                  result))))
 
   (testing "text → EPS: mixed ASCII and non-ASCII"
-    (let [[issue result] (pic.render {:target :eps}
-                                     [:pic {:width 200 :height 100}
+    (let [[issue result] (bic.render {:target :eps}
+                                     [:bic {:width 200 :height 100}
                                       [:text {:x 10 :y 20 :font "FreeSans" :size 12
                                               :str "A☺B"}]])]
       (is (nil? issue))
       (is (deep= [:eps {:width 200 :height 100}
                   [:setfont {:name "FreeSans" :size 12}]
-                  [:moveto {:x 10 :y (pic.eps-y 100 20)}]
+                  [:moveto {:x 10 :y (bic.eps-y 100 20)}]
                   [:show {:str "A"}]
                   [:glyphshow {:name "smileface"}]
                   [:show {:str "B"}]]

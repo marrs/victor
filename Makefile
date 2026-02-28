@@ -51,25 +51,25 @@ target/smiley-eps-dsl.eps: test-assets/smiley-eps-dsl.fnl $(TARGET) | target
 target/smiley-eps-dsl.ps: target/smiley-eps-dsl.eps
 	sed 's/%%EOF/showpage\n%%EOF/' $< > $@
 
-target/smiley-pic-svg.svg: test-assets/smiley-pic-svg.fnl $(TARGET) | target
+target/smiley-bic-svg.svg: test-assets/smiley-bic-svg.fnl $(TARGET) | target
 	$(TARGET) $< > $@
 
-target/smiley-pic-eps.eps: test-assets/smiley-pic-eps.fnl $(TARGET) | target
+target/smiley-bic-eps.eps: test-assets/smiley-bic-eps.fnl $(TARGET) | target
 	$(TARGET) $< > $@
 
-target/smiley-pic-eps.ps: target/smiley-pic-eps.eps
+target/smiley-bic-eps.ps: target/smiley-bic-eps.eps
 	sed 's/%%EOF/showpage\n%%EOF/' $< > $@
 
 target/test-groff.ps: test-assets/test-groff.ms $(TARGET) | target
 	$(TARGET) groff $< | groff -ms - > $@
 
 smoketest: target/smiley-svg-dsl.svg target/smiley-eps-dsl.ps \
-           target/smiley-pic-svg.svg target/smiley-pic-eps.ps \
+           target/smiley-bic-svg.svg target/smiley-bic-eps.ps \
            target/test-groff.ps
 	$(SVG_VIEWER) target/smiley-svg-dsl.svg &
-	$(SVG_VIEWER) target/smiley-pic-svg.svg &
+	$(SVG_VIEWER) target/smiley-bic-svg.svg &
 	$(EPS_VIEWER) target/smiley-eps-dsl.ps &
-	$(EPS_VIEWER) target/smiley-pic-eps.ps &
+	$(EPS_VIEWER) target/smiley-bic-eps.ps &
 	$(EPS_VIEWER) target/test-groff.ps
 
 tags:

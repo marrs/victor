@@ -10,9 +10,23 @@ All new features follow a 3-stage workflow:
 
 Do not edit tests after they have been approved without explicitly asking the user for permission first.
 
+## BDD for Pure Renames
+
+When renaming a module, tag, or function (no new behaviour), the workflow compresses to two rounds with a content-then-rename split:
+
+1. **Content changes** — Edit spec files in place: update all references (local names, function calls, tag literals, require path) to use the new name, but keep the require path pointing at the existing source file so the module still loads. Tests should fail (the source still uses the old name). Wait for user to confirm the diff.
+2. **Source update** — Update the source file to use the new name. Tests pass.
+3. **File renames** — `git mv` all affected files (source, spec, test assets). Update the require path in the spec and any Makefile targets. Tests still pass.
+
+Key points:
+- Never rename files and change content simultaneously — git loses the rename detection and diffs become unreadable.
+- The intermediate failing state (after step 1) should produce failing tests, not crashes. The test framework (`src/fennel/test.fnl`) wraps each `deftest` body in `pcall` so uncaught Lua errors are reported as individual test failures rather than aborting the run.
+
 ## Build Process
 
 The user builds the code and pastes any errors. Do not run the build yourself.
+
+If the output shows a crash (process aborted, unhandled exception, Lua error propagating to C++, etc.) rather than test failures, identify the root cause, explain it clearly, and ask how to proceed. Do not attempt to fix a crash by modifying source files without that conversation.
 
 ## C++ Style
 
@@ -30,6 +44,10 @@ The codebase is written in a C-style subset of C++:
 
 - Dotted names in `deftest` (e.g. `deftest eps.str`) compile to table field assignment, overwriting the module function and causing infinite recursion. The `deftest` macro binds the test function to a gensym to avoid this.
 - `/` → `:` transformation (for namespaced XML tags/attrs) only applies to globals, not locals. Use dot notation for local variable field access: `xml.str`, not `xml/str`.
+
+## Fennel Test Runs Must Never Crash
+
+A Fennel spec run should always produce test output (pass/fail counts). Crashes — where the process aborts before printing results — are bugs to be fixed, not accepted states. The `deftest` macro wraps each test body in `pcall` so that uncaught Lua errors are caught and reported as failures rather than aborting the run. If a spec run crashes instead of reporting failures, identify and fix the root cause before continuing.
 
 ## EPS / PS Output
 
@@ -49,7 +67,7 @@ nil                                          ;; valid
 {:level :warning :type :ns/code :msg "..."}  ;; valid but suspicious
 ```
 
-**Renderers** (`pic.render`, etc.) return a 2-element tuple:
+**Renderers** (`bic.render`, etc.) return a 2-element tuple:
 ```fennel
 [nil result]                                 ;; success
 [{:level :warning :type :ns/code :msg "..."} result]  ;; warning — result still produced

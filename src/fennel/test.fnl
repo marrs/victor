@@ -74,7 +74,11 @@
      (each [_# test# (ipairs st#.list)]
        (tset st# :current test#.name)
        (tset st# :ctx nil)
-       (test#.fn))
+       (let [(ok# err#) (pcall test#.fn)]
+         (when (not ok#)
+           (tset st# :fail (+ st#.fail 1))
+           (table.insert st#.errors
+             {:test test#.name :ctx nil :form "uncaught error" :msg err#}))))
      (print (string.format "\n%d passed, %d failed" st#.pass st#.fail))
      (each [_# err# (ipairs st#.errors)]
        (let [where# (.. (or err#.test "?")

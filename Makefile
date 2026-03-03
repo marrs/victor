@@ -63,14 +63,19 @@ target/smiley-bic-eps.ps: target/smiley-bic-eps.eps
 target/test-groff.ps: test-assets/test-groff.ms $(TARGET) | target
 	$(TARGET) groff $< | groff -ms - > $@
 
+target/test-groff.pdf: target/test-groff.ps $(TARGET)
+	ps2pdf $< $@
+
 smoketest: target/smiley-svg-dsl.svg target/smiley-eps-dsl.ps \
            target/smiley-bic-svg.svg target/smiley-bic-eps.ps \
-           target/test-groff.ps
+           target/test-groff.ps \
+           target/test-groff.pdf
 	$(SVG_VIEWER) target/smiley-svg-dsl.svg &
 	$(SVG_VIEWER) target/smiley-bic-svg.svg &
 	$(EPS_VIEWER) target/smiley-eps-dsl.ps &
 	$(EPS_VIEWER) target/smiley-bic-eps.ps &
-	$(EPS_VIEWER) target/test-groff.ps
+	$(EPS_VIEWER) target/test-groff.ps &
+	$(EPS_VIEWER) target/test-groff.pdf
 
 tags:
 	ctags -R *

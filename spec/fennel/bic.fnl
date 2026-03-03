@@ -19,6 +19,18 @@
     30  71))  ;; arbitrary value
 
 (deftest render
+  (testing "default to EPS when no target option is specified"
+           (let [[issue result]
+                 (bic.render {} [:bic {:width 200 :height 100}
+                                      [:rect {:x 10 :y 20 :width 80 :height 40}]])]
+             (is (= :eps (?. result 1)))))
+
+  (testing "default to EPS when no options are specified"
+     (let [[issue result]
+           (bic.render [:bic {:width 200 :height 100}
+                             [:rect {:x 10 :y 20 :width 80 :height 40}]])]
+      (is (= :eps (?. result 1)))))
+
   (testing "rect → SVG"
     (let [[issue result] (bic.render {:target :svg}
                                      [:bic {:width 200 :height 100}

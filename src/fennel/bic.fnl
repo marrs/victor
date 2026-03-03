@@ -1,5 +1,5 @@
 (local validator (require :src.fennel.validator))
-(local {: number? : string?} (require :src.fennel.core))
+(local {: nil? : number? : string?} (require :src.fennel.core))
 
 (fn eps-y [height y] (- height y))
 
@@ -178,16 +178,18 @@
 ;;; render
 
 (fn render [opts node]
-  (let [tag    (. node 1)
-        attrs  (. node 2)
-        target opts.target]
+  (local node (if (nil? node) opts node))
+  (local opts (if (nil? node) {} opts))
+  (let [tag    (?. node 1)
+        attrs  (?. node 2)
+        target (or opts.target :eps)]
     (when (not= tag :bic)
       (error (.. "bic: expected :bic tag, got " (tostring tag))))
     (let [ctx      {:width attrs.width :height attrs.height}
           children []]
       (var issue nil)
-      (for [ii 3 (length node) &until issue]
-        (let [child      (. node ii)
+      (for [idx 3 (length node) &until issue]
+        (let [child      (. node idx)
               prim-tag   (. child 1)
               prim-attrs (. child 2)
               prim-schema (. schema prim-tag)]
@@ -202,8 +204,8 @@
             (let [translator (. (. translators prim-tag) target)
                   [tr-issue nodes] (translator prim-attrs ctx)]
               (when tr-issue (set issue tr-issue))
-              (each [_ nn (ipairs nodes)]
-                (table.insert children nn))))))
+              (each [_ x (ipairs nodes)]
+                (table.insert children x))))))
       (if issue
         [issue nil]
         (let [doc (if (= target :svg)

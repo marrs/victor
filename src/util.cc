@@ -33,7 +33,7 @@ static String_Result string_result(int level, const char *code,
 
 static void format_err(const char *context, const Error &err, char *buf, size_t len)
 {
-    snprintf(buf, len, "[%s] %s: %s", context, err.code, err.msg);
+    snprintf(buf, len, "[victor/%s] %s: %s", context, err.code, err.msg);
 }
 
 static void print_err(const char *context, const String_Result &res)

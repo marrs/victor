@@ -48,9 +48,10 @@
                  result))))
 
   (testing "circle → SVG"
-    (let [[issue result] (bic.render {:target :svg}
-                                     [:bic {:width 200 :height 100}
-                                      [:circle {:cx 50 :cy 50 :r 30}]])]
+    (let [[issue result]
+         (bic.render {:target :svg}
+                     [:bic {:width 200 :height 100}
+                           [:circle {:cx 50 :cy 50 :r 30}]])]
       (is (nil? issue))
       (is (deep= (svg {} [:circle {:cx 50 :cy 50 :r 30}])
                  result))))

@@ -150,7 +150,7 @@
                 process_groff(groff_lua, "/nonexistent/path/file.ms");
                 capture_end(&cap, STDERR_FILENO);
                 expect_str_eq(cap.buf,
-                    "[groff] groff/cannot-open: cannot open '/nonexistent/path/file.ms'\n");
+                    "[victor/groff] groff/cannot-open: cannot open '/nonexistent/path/file.ms'\n");
             } tested;
 
             it("writes error to stderr for a Fennel evaluation failure") {
@@ -164,7 +164,7 @@
                 process_groff(groff_lua, fix_path);
                 capture_end(&cap, STDERR_FILENO);
                 remove(fix_path);
-                expect_str_contains(cap.buf, "[groff] groff/fennel-error:");
+                expect_str_contains(cap.buf, "[victor/groff] groff/fennel-error:");
             } tested;
 
             it("includes filepath and line number in the Fennel error message") {
@@ -185,7 +185,7 @@
                 capture_end(&cap, STDERR_FILENO);
                 remove(fix_path);
                 expect_str_eq(cap.buf,
-                    "[groff] groff/orphan-endvic: orphan .ENDVIC\n");
+                    "[victor/groff] groff/orphan-endvic: orphan .ENDVIC\n");
             } tested;
 
             it("writes warning to stderr for an unterminated .VIC block") {
@@ -197,7 +197,7 @@
                 capture_end(&cap, STDERR_FILENO);
                 remove(fix_path);
                 expect_str_eq(cap.buf,
-                    "[groff] groff/unterminated-vic: unterminated .VIC block\n");
+                    "[victor/groff] groff/unterminated-vic: unterminated .VIC block\n");
             } tested;
 
             it("writes error to stderr when VIC block produces no string") {
@@ -209,7 +209,7 @@
                 capture_end(&cap, STDERR_FILENO);
                 remove(fix_path);
                 expect_str_eq(cap.buf,
-                    "[groff] groff/no-string: VIC block 0 produced no string\n");
+                    "[victor/groff] groff/no-string: VIC block 0 produced no string\n");
             } tested;
 
             it("writes error to stderr when EPS file cannot be written") {
@@ -224,7 +224,7 @@
                 process_groff(groff_lua, fix_path);
                 capture_end(&cap, STDERR_FILENO);
                 remove(fix_path);
-                expect_str_contains(cap.buf, "[groff] groff/eps-write-failed:");
+                expect_str_contains(cap.buf, "[victor/groff] groff/eps-write-failed:");
             } tested;
 
         lua_close(groff_lua);

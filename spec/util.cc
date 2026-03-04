@@ -3,5 +3,5 @@
             char buf[256];
             Error err = {LOG_ERROR, "groff/test-code", "test message"};
             format_err("groff", err, buf, sizeof(buf));
-            expect_str_eq(buf, "[groff] groff/test-code: test message");
+            expect_str_eq(buf, "[victor/groff] groff/test-code: test message");
         } tested;

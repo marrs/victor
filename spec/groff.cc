@@ -1,3 +1,27 @@
+    describe("rewrite_fennel_err")
+        it("rewrites [string ...]:N: prefix to filepath:lineno: with correct line offset") {
+            char out[256];
+            rewrite_fennel_err(out, sizeof(out),
+                "[string \"(do (local a 1)(local b 2)(local c 3)...\"]:3: some error",
+                "foo.ms", 10);
+            expect_str_eq(out, "foo.ms:13: some error");
+        } tested;
+
+        it("passes through messages that do not start with [string") {
+            char out[256];
+            rewrite_fennel_err(out, sizeof(out),
+                "some other error", "foo.ms", 5);
+            expect_str_eq(out, "some other error");
+        } tested;
+
+        it("handles a block error on the first line") {
+            char out[256];
+            rewrite_fennel_err(out, sizeof(out),
+                "[string \"(do (local x 1))\"]:1: some error",
+                "bar.ms", 7);
+            expect_str_eq(out, "bar.ms:8: some error");
+        } tested;
+
     describe("groff_stem")
         it("strips directory and extension from a simple path") {
             char buf[256];
@@ -141,6 +165,15 @@
                 capture_end(&cap, STDERR_FILENO);
                 remove(fix_path);
                 expect_str_contains(cap.buf, "[groff] groff/fennel-error:");
+            } tested;
+
+            it("includes filepath and line number in the Fennel error message") {
+                Capture cap;
+                capture_start(&cap, STDERR_FILENO);
+                process_groff(groff_lua, "spec/fixtures/fennel-error.ms");
+                capture_end(&cap, STDERR_FILENO);
+                expect_str_contains(cap.buf,
+                    "spec/fixtures/fennel-error.ms:3:");
             } tested;
 
             it("writes warning to stderr for an orphan .ENDVIC") {

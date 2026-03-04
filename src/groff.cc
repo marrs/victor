@@ -18,6 +18,37 @@ static char *groff_stem(const char *filepath, char *out, size_t outlen)
     return out;
 }
 
+// Rewrite a Lua string-chunk error prefix to a file:line: prefix.
+// Lua formats errors from string chunks as: [string "..."]:N: message
+// This rewrites that prefix to: filepath:(vic_start_line+N): message
+static void rewrite_fennel_err(char *out, size_t outsz,
+                                const char *msg,
+                                const char *filepath, int vic_start_line)
+{
+    static const char pfx[] = "[string \"";
+    if (strncmp(msg, pfx, sizeof(pfx) - 1) != 0) {
+        strncpy(out, msg, outsz - 1);
+        out[outsz - 1] = '\0';
+        return;
+    }
+    // Scan for "]:N: pattern — the closing delimiter of the chunk name
+    const char *scan = msg + sizeof(pfx) - 1;
+    while (*scan) {
+        if (scan[0] == '"' && scan[1] == ']' && scan[2] == ':') {
+            char *endptr;
+            long block_line = strtol(scan + 3, &endptr, 10);
+            if (endptr > scan + 3 && *endptr == ':') {
+                int file_line = vic_start_line + (int)block_line;
+                snprintf(out, outsz, "%s:%d:%s", filepath, file_line, endptr + 1);
+                return;
+            }
+        }
+        scan++;
+    }
+    strncpy(out, msg, outsz - 1);
+    out[outsz - 1] = '\0';
+}
+
 // Process a groff file: scan for .VIC/.ENDVIC blocks, evaluate each as Fennel,
 // write EPS to CWD, emit modified groff (with .PSPIC) to stdout.
 // Returns 0 on success, -1 on error.
@@ -37,6 +68,8 @@ static int process_groff(lua_State *lua, const char *filepath)
 
     int vic_counter = 0;
     int in_vic = 0;
+    int line_num = 0;
+    int vic_start_line = 0;
     Buf vic_code;
     if (buf_init(&vic_code) < 0) {
         String_Result res = string_result(LOG_ERROR, "groff/out-of-memory",
@@ -49,12 +82,14 @@ static int process_groff(lua_State *lua, const char *filepath)
     char line[4096];
     while (fgets(line, sizeof(line), f)) {
         size_t len = strlen(line);
+        line_num++;
 
         if (!in_vic) {
             if (strncmp(line, ".VIC", 4) == 0 &&
                     (line[4] == '\n' || line[4] == '\r' ||
                      line[4] == '\0' || line[4] == ' ')) {
                 in_vic = 1;
+                vic_start_line = line_num;
                 buf_reset(&vic_code);
                 const char *prefix = "(do ";
                 for (const char *p = prefix; *p; ++p)
@@ -109,8 +144,8 @@ static int process_groff(lua_State *lua, const char *filepath)
                     lua_pop(lua, 1);
                 } else {
                     char err_msg[4096];
-                    strncpy(err_msg, lua_tostring(lua, -1), sizeof(err_msg) - 1);
-                    err_msg[sizeof(err_msg) - 1] = '\0';
+                    rewrite_fennel_err(err_msg, sizeof(err_msg),
+                                       lua_tostring(lua, -1), filepath, vic_start_line);
                     lua_pop(lua, 1);
                     String_Result res = string_result(LOG_ERROR,
                         "groff/fennel-error", err_msg, nullptr);

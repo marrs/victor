@@ -63,7 +63,7 @@ target/smiley-bic-eps.ps: target/smiley-bic-eps.eps
 target/test-groff.ps: test-assets/test-groff.ms $(TARGET) | target
 	$(TARGET) groff $< | groff -ms - > $@
 
-target/test-groff.pdf: test-assets/test-groff.ms target/test-groff.ps $(TARGET)
+target/test-groff.pdf: target/test-groff.ps
 	ps2pdf $< $@
 
 smoketest: target/smiley-svg-dsl.svg target/smiley-eps-dsl.ps \

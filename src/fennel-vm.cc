@@ -71,6 +71,14 @@ static lua_State *fennel_init() {
     }
     lua_setglobal(lua, "__fennel");
 
+    // Make fennel require-able as 'fennel' — VIC blocks can use (require :fennel)
+    if (luaL_dostring(lua, "package.loaded['fennel'] = __fennel") != LUA_OK) {
+        fprintf(stderr, "diagram: cannot register fennel in package.loaded: %s\n",
+                lua_tostring(lua, -1));
+        lua_close(lua);
+        return NULL;
+    }
+
     // Register a searcher that checks fennel's macro-loaded cache first.
     // Modules already compiled by import-macros are returned directly, avoiding
     // a second compilation in runtime scope (where quasiquotes are illegal).

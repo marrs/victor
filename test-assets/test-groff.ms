@@ -13,10 +13,8 @@ Here is a an :eps example:
 Here is a :bic example:
 .VIC
 (local bic (require :src.fennel.bic))
-(local eps (require :src.fennel.eps))
-(let [[_ doc] (bic.render [:bic {:width 100 :height 100}
-               [:rect {:x 0 :y 0 :width 100 :height 100}]])]
-  (eps.str doc))
+(bic.render [:bic {:width 100 :height 100}
+             [:rect {:x 0 :y 0 :width 100 :height 100}]])
 .ENDVIC
 .PP
 End of document.

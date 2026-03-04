@@ -1,5 +1,7 @@
 (local validator (require :src.fennel.validator))
-(local {: nil? : number? : string?} (require :src.fennel.core))
+(local eps (require :src.fennel.eps))
+(local xml (require :src.fennel.xml))
+(local {: nil? : number? : string? } (require :src.fennel.core))
 
 (fn eps-y [height y] (- height y))
 
@@ -175,9 +177,7 @@
                (table.insert nodes [:stroke]))
              [nil nodes]))}})
 
-;;; render
-
-(fn render [opts node]
+(fn dsl [opts node]
   (local node (if (nil? node) opts node))
   (local opts (if (nil? node) {} opts))
   (let [tag    (?. node 1)
@@ -216,4 +216,12 @@
             (table.insert doc child))
           [nil doc])))))
 
-{: eps-y : render}
+(fn render [opts node]
+  (let [[err output] (dsl opts node)]
+    (if err (comment handle-error)
+      (if (= :eps (. output 1))
+        (eps.str output)
+        (xml.str output)))))
+
+
+{: eps-y : dsl : render}

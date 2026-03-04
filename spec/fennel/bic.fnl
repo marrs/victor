@@ -18,21 +18,21 @@
     50  51    ;; near-halfway: odd height exposes rounding errors
     30  71))  ;; arbitrary value
 
-(deftest render
+(deftest dsl
   (testing "default to EPS when no target option is specified"
            (let [[issue result]
-                 (bic.render {} [:bic {:width 200 :height 100}
+                 (bic.dsl {} [:bic {:width 200 :height 100}
                                       [:rect {:x 10 :y 20 :width 80 :height 40}]])]
              (is (= :eps (?. result 1)))))
 
   (testing "default to EPS when no options are specified"
      (let [[issue result]
-           (bic.render [:bic {:width 200 :height 100}
+           (bic.dsl [:bic {:width 200 :height 100}
                              [:rect {:x 10 :y 20 :width 80 :height 40}]])]
       (is (= :eps (?. result 1)))))
 
   (testing "rect → SVG"
-    (let [[issue result] (bic.render {:target :svg}
+    (let [[issue result] (bic.dsl {:target :svg}
                                      [:bic {:width 200 :height 100}
                                       [:rect {:x 10 :y 20 :width 80 :height 40}]])]
       (is (nil? issue))
@@ -40,7 +40,7 @@
                  result))))
 
   (testing "rect with rx → SVG passthrough"
-    (let [[issue result] (bic.render {:target :svg}
+    (let [[issue result] (bic.dsl {:target :svg}
                                      [:bic {:width 200 :height 100}
                                       [:rect {:x 10 :y 20 :width 80 :height 40 :rx 8}]])]
       (is (nil? issue))
@@ -49,7 +49,7 @@
 
   (testing "circle → SVG"
     (let [[issue result]
-         (bic.render {:target :svg}
+         (bic.dsl {:target :svg}
                      [:bic {:width 200 :height 100}
                            [:circle {:cx 50 :cy 50 :r 30}]])]
       (is (nil? issue))
@@ -57,7 +57,7 @@
                  result))))
 
   (testing "rect → EPS with y-flip"
-    (let [[issue result] (bic.render {:target :eps}
+    (let [[issue result] (bic.dsl {:target :eps}
                                      [:bic {:width 200 :height 100}
                                       [:rect {:x 10 :y 20 :width 80 :height 40}]])]
       (is (nil? issue))
@@ -66,7 +66,7 @@
                  result))))
 
   (testing "rect with rx → EPS path decomposition"
-    (let [[issue result] (bic.render {:target :eps}
+    (let [[issue result] (bic.dsl {:target :eps}
                                      [:bic {:width 200 :height 100}
                                       [:rect {:x 10 :y 20 :width 80 :height 40 :rx 8}]])]
       (is (nil? issue))
@@ -86,7 +86,7 @@
                  result))))
 
   (testing "circle → EPS with y-flip"
-    (let [[issue result] (bic.render {:target :eps}
+    (let [[issue result] (bic.dsl {:target :eps}
                                      [:bic {:width 200 :height 100}
                                       [:circle {:cx 50 :cy 30 :r 20}]])]
       (is (nil? issue))
@@ -97,19 +97,19 @@
                  result))))
 
   (testing "document wrapper → SVG"
-    (let [[issue result] (bic.render {:target :svg}
+    (let [[issue result] (bic.dsl {:target :svg}
                                      [:bic {:width 200 :height 100}])]
       (is (nil? issue))
       (is (deep= (svg {}) result))))
 
   (testing "document wrapper → EPS"
-    (let [[issue result] (bic.render {:target :eps}
+    (let [[issue result] (bic.dsl {:target :eps}
                                      [:bic {:width 200 :height 100}])]
       (is (nil? issue))
       (is (deep= [:eps {:width 200 :height 100}] result))))
 
   (testing "text → SVG"
-    (let [[issue result] (bic.render {:target :svg}
+    (let [[issue result] (bic.dsl {:target :svg}
                                      [:bic {:width 200 :height 100}
                                       [:text {:x 10 :y 20 :font "FreeSans" :size 12
                                               :str "Hello"}]])]
@@ -119,7 +119,7 @@
                  result))))
 
   (testing "text → SVG: non-ASCII character passes through as UTF-8"
-    (let [[issue result] (bic.render {:target :svg}
+    (let [[issue result] (bic.dsl {:target :svg}
                                      [:bic {:width 200 :height 100}
                                       [:text {:x 10 :y 20 :font "FreeSans" :size 12
                                               :str "☺"}]])]
@@ -129,7 +129,7 @@
                  result))))
 
   (testing "text → EPS: ASCII-only string"
-    (let [[issue result] (bic.render {:target :eps}
+    (let [[issue result] (bic.dsl {:target :eps}
                                      [:bic {:width 200 :height 100}
                                       [:text {:x 10 :y 20 :font "FreeSans" :size 12
                                               :str "Hi"}]])]
@@ -141,7 +141,7 @@
                  result))))
 
   (testing "text → EPS: non-ASCII codepoint emits glyphshow with post table name"
-    (let [[issue result] (bic.render {:target :eps}
+    (let [[issue result] (bic.dsl {:target :eps}
                                      [:bic {:width 200 :height 100}
                                       [:text {:x 10 :y 20 :font "FreeSans" :size 12
                                               :str "☺"}]])]
@@ -153,7 +153,7 @@
                  result))))
 
   (testing "text → EPS: mixed ASCII and non-ASCII"
-    (let [[issue result] (bic.render {:target :eps}
+    (let [[issue result] (bic.dsl {:target :eps}
                                      [:bic {:width 200 :height 100}
                                       [:text {:x 10 :y 20 :font "FreeSans" :size 12
                                               :str "A☺B"}]])]

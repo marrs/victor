@@ -44,24 +44,42 @@
     {
         lua_State *groff_lua = fennel_init();
 
+        // Holds a fixture path and its derived EPS path under a given directory.
+        // Call cleanup() when done.
+        struct Vic_Fixture {
+            char fix_path[32];
+            char eps_path[128];
+
+            static Vic_Fixture make(const char *expr, const char *dir) {
+                Vic_Fixture res;
+                char body[256];
+                snprintf(body, sizeof(body), ".VIC\n%s\n.ENDVIC\n", expr);
+                make_fixture(res.fix_path, body);
+                char stem[64];
+                groff_stem(res.fix_path, stem, sizeof(stem));
+                if (dir)
+                    snprintf(res.eps_path, sizeof(res.eps_path), "%s/%s.0.eps", dir, stem);
+                else
+                    snprintf(res.eps_path, sizeof(res.eps_path), "%s.0.eps", stem);
+                return res;
+            }
+
+            void cleanup() const {
+                remove(eps_path);
+                remove(fix_path);
+            }
+        };
+
         // Evaluate a single-expression VIC block and return the content written
         // to the resulting EPS file. Cleans up both the fixture and EPS file.
         struct Vic_Eps {
             static void call(lua_State *lua, const char *expr, char *out, size_t outsz) {
-                char fix_path[32];
-                char body[256];
-                snprintf(body, sizeof(body), ".VIC\n%s\n.ENDVIC\n", expr);
-                make_fixture(fix_path, body);
-                char stem[64];
-                groff_stem(fix_path, stem, sizeof(stem));
-                char eps_path[128];
-                snprintf(eps_path, sizeof(eps_path), "%s.0.eps", stem);
-                process_groff(lua, fix_path);
-                FILE *ef = fopen(eps_path, "r");
+                Vic_Fixture fix = Vic_Fixture::make(expr, nullptr);
+                process_groff(lua, fix.fix_path);
+                FILE *ef = fopen(fix.eps_path, "r");
                 out[0] = '\0';
-                if (ef) { fread(out, 1, outsz - 1, ef); fclose(ef); }
-                remove(eps_path);
-                remove(fix_path);
+                if (ef) { size_t nr = fread(out, 1, outsz - 1, ef); out[nr] = '\0'; fclose(ef); }
+                fix.cleanup();
             }
         };
 
@@ -258,6 +276,28 @@
                 capture_end(&cap, STDERR_FILENO);
                 remove(fix_path);
                 expect_str_contains(cap.buf, "[victor/groff] groff/eps-write-failed:");
+            } tested;
+
+        describe("process_groff intermediate dir")
+            it("writes EPS to the given directory") {
+                Vic_Fixture fix = Vic_Fixture::make("\"dir-test\"", "target");
+                process_groff(groff_lua, fix.fix_path, "target");
+                FILE *ef = fopen(fix.eps_path, "r");
+                expect_ptr_neq(nullptr, ef);
+                if (ef) fclose(ef);
+                fix.cleanup();
+            } tested;
+
+            it("emits .PSPIC with the intermediate dir path") {
+                Vic_Fixture fix = Vic_Fixture::make("\"dir-pspic\"", "target");
+                Capture cap;
+                capture_start(&cap, STDOUT_FILENO);
+                process_groff(groff_lua, fix.fix_path, "target");
+                capture_end(&cap, STDOUT_FILENO);
+                char expected[256];
+                snprintf(expected, sizeof(expected), ".PSPIC %s\n", fix.eps_path);
+                expect_str_eq(cap.buf, expected);
+                fix.cleanup();
             } tested;
 
         lua_close(groff_lua);

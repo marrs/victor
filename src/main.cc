@@ -15,11 +15,21 @@ int main(int argc, char **argv) {
 
     if (argc > 1) {
         if (strcmp(argv[1], "groff") == 0) {
-            if (argc < 3) {
-                fprintf(stderr, "Usage: victor groff <file>\n");
+            const char *dir = nullptr;
+            const char *file = nullptr;
+            for (int argi = 2; argi < argc; argi++) {
+                if ((strcmp(argv[argi], "-i") == 0 ||
+                     strcmp(argv[argi], "--intermediate") == 0) && argi + 1 < argc) {
+                    dir = argv[++argi];
+                } else {
+                    file = argv[argi];
+                }
+            }
+            if (!file) {
+                fprintf(stderr, "Usage: victor groff [-i <dir>] <file>\n");
                 status = 1;
             } else {
-                status = process_groff(lua, argv[2]) < 0 ? 1 : 0;
+                status = process_groff(lua, file, dir) < 0 ? 1 : 0;
             }
         } else {
             status = (fennel_dofile(lua, argv[1]) < 0) ? 1 : 0;

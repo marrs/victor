@@ -52,7 +52,7 @@ static void rewrite_fennel_err(char *out, size_t outsz,
 // Process a groff file: scan for .VIC/.ENDVIC blocks, evaluate each as Fennel,
 // write EPS to CWD, emit modified groff (with .PSPIC) to stdout.
 // Returns 0 on success, -1 on error.
-static int process_groff(lua_State *lua, const char *filepath)
+static int process_groff(lua_State *lua, const char *filepath, const char *dir = nullptr)
 {
     FILE *f = fopen(filepath, "r");
     if (!f) {
@@ -123,8 +123,13 @@ static int process_groff(lua_State *lua, const char *filepath)
                         size_t epslen;
                         const char *eps = lua_tolstring(lua, -1, &epslen);
                         char eps_path[8192];
-                        snprintf(eps_path, sizeof(eps_path), "%s.%d.eps",
-                                 stem, vic_counter);
+                        if (dir) {
+                            snprintf(eps_path, sizeof(eps_path), "%s/%s.%d.eps",
+                                     dir, stem, vic_counter);
+                        } else {
+                            snprintf(eps_path, sizeof(eps_path), "%s.%d.eps",
+                                     stem, vic_counter);
+                        }
                         FILE *ef = fopen(eps_path, "w");
                         if (!ef) {
                             char msg[8208];
@@ -185,3 +190,4 @@ static int process_groff(lua_State *lua, const char *filepath)
     buf_free(&vic_code);
     return 0;
 }
+

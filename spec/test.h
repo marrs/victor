@@ -92,6 +92,16 @@ void expect_str_contains(const char *haystack, const char *needle)
     }
 }
 
+void expect_ptr_neq(const void *v1, const void *v2)
+{
+    if (v1 != v2) {
+        pass();
+    } else {
+        ++failing_tests;
+        printf("\n%s  ❌ Expected \"%p\" to not equal \"%p\"\n", test_padding[test_padlen], v1, v2);
+    }
+}
+
 void expect_ptr_eq(const void *v1, const void *v2)
 {
     if (v1 == v2) {

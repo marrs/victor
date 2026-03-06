@@ -175,8 +175,7 @@
           (is (= :setfont (-> font-output (. 1))) ":eps :setfont operator is set")
           (is (= "FreeSans" (-> font-output
                               (. 2)
-                              (. :name))
-                   result)
+                              (. :name)))
               "Font name is set if provided.")))
 
         (testing "Font name is set to default if :font attribute is absent"
@@ -185,10 +184,11 @@
           (let [[issue result] (bic.dsl {:target :eps}
                                         [:bic {:width 200 :height 100}
                                          [:text {:x 10 :y 20 :str "Hi"}]])]
+            (tset _G :vic_font nil)
+            (tset _G :vic_size nil)
             (is (nil? issue))
             (is (= "FreeSans" (?. result 3 2 :name))
                 "Font name is set to default if :font attribute is absent")
-            
             (is (= 12 (?. result 3 2 :size))
                 "Font size is set to default if :size attribute is absent")))
 

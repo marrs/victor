@@ -44,6 +44,27 @@
     {
         lua_State *groff_lua = fennel_init();
 
+        // Evaluate a single-expression VIC block and return the content written
+        // to the resulting EPS file. Cleans up both the fixture and EPS file.
+        struct Vic_Eps {
+            static void call(lua_State *lua, const char *expr, char *out, size_t outsz) {
+                char fix_path[32];
+                char body[256];
+                snprintf(body, sizeof(body), ".VIC\n%s\n.ENDVIC\n", expr);
+                make_fixture(fix_path, body);
+                char stem[64];
+                groff_stem(fix_path, stem, sizeof(stem));
+                char eps_path[128];
+                snprintf(eps_path, sizeof(eps_path), "%s.0.eps", stem);
+                process_groff(lua, fix_path);
+                FILE *ef = fopen(eps_path, "r");
+                out[0] = '\0';
+                if (ef) { fread(out, 1, outsz - 1, ef); fclose(ef); }
+                remove(eps_path);
+                remove(fix_path);
+            }
+        };
+
         describe("process_groff stdout")
             it("passes through non-VIC lines unchanged") {
                 char fix_path[32];
@@ -141,6 +162,18 @@
                 capture_end(&cap, STDOUT_FILENO);
                 remove(fix_path);
                 expect_str_eq(cap.buf, ".\\\" VIC block 0: no output\n");
+            } tested;
+
+            it("vic_font is set to Times-Roman before VIC block evaluation") {
+                char content[256];
+                Vic_Eps::call(groff_lua, "vic_font", content, sizeof(content));
+                expect_str_eq(content, "Times-Roman");
+            } tested;
+
+            it("vic_size is set to 10 before VIC block evaluation") {
+                char content[256];
+                Vic_Eps::call(groff_lua, "(tostring vic_size)", content, sizeof(content));
+                expect_str_eq(content, "10");
             } tested;
 
         describe("process_groff stderr")

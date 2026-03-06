@@ -113,6 +113,11 @@ static int process_groff(lua_State *lua, const char *filepath)
                 buf_push(&vic_code, ')');
                 buf_push(&vic_code, '\0');
 
+                lua_pushstring(lua, "Times-Roman");
+                lua_setglobal(lua, "vic_font");
+                lua_pushinteger(lua, 10);
+                lua_setglobal(lua, "vic_size");
+
                 if (fennel_eval_retain(lua, vic_code.data) == 0) {
                     if (lua_isstring(lua, -1)) {
                         size_t epslen;

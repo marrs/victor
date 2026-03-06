@@ -65,29 +65,46 @@
         (is (nil? issue))
         (is (deep= (svg {} [:text {:x 10 :y 20 :font-family "FreeSans"
                                    :font-size 12} "Hello"])
-                   result))))
+                   result)))
 
-    (testing "text - non-ASCII character passes through as UTF-8"
+      (testing "Font name is set to default if :font attribute is absent"
+        (tset _G :vic_font "FreeSans")
+        (tset _G :vic_size 12)
+        (let [[issue result] (bic.dsl {:target :svg}
+                                      [:bic {:width 200 :height 100}
+                                       [:text {:x 10 :y 20 :size 12 :str "Hi"}]])]
+          (tset _G :vic_font nil)
+          (is (nil? issue))
+          (is (= "FreeSans" (?. result 3 2 :font-family))
+              "Font name is set to default if :font attribute is absent")
+          (is (= 12 (?. result 3 2 :font-size))
+              "Font size is set to default if :size attribute is absent")))
+
+      (testing "missing font/size with no globals fails validation"
+        (let [[issue _result] (bic.dsl {:target :svg}
+                                       [:bic {:width 200 :height 100}
+                                        [:text {:x 10 :y 20 :str "Hi"}]])]
+          (is (= :error issue.level))))
+
       (let [[issue result] (bic.dsl {:target :svg}
                                     [:bic {:width 200 :height 100}
                                      [:text {:x 10 :y 20 :font "FreeSans" :size 12
                                              :str "☺"}]])]
-        (is (nil? issue))
         (is (deep= (svg {} [:text {:x 10 :y 20 :font-family "FreeSans"
                                    :font-size 12} "☺"])
-                   result))))
+                   result)
+            "Non-ASCII character passes through as UTF-8"))
 
-    (testing "text - non-ASCII codepoint emits glyphshow with post table name"
       (let [[issue result] (bic.dsl {:target :eps}
                                     [:bic {:width 200 :height 100}
                                      [:text {:x 10 :y 20 :font "FreeSans" :size 12
                                              :str "☺"}]])]
-        (is (nil? issue))
         (is (deep= [:eps {:width 200 :height 100}
                     [:setfont {:name "FreeSans" :size 12}]
                     [:moveto {:x 10 :y (bic.eps-y 100 20)}]
                     [:glyphshow {:name "smileface"}]]
-                   result))))
+                   result)
+            "Non-ASCII code point emits glyphshow with post table name")))
 
     (testing "measurement dims [:in 1] [:pt 72] → SVG doc with {:width \"1in\" :height \"72pt\"}"
       (let [[issue result] (bic.dsl {:target :svg}
@@ -141,7 +158,7 @@
                     [:stroke]]
                    result))))
 
-    (testing "text - ASCII-only string"
+    (testing "text"
       (let [[issue result] (bic.dsl {:target :eps}
                                     [:bic {:width 200 :height 100}
                                      [:text {:x 10 :y 20 :font "FreeSans" :size 12
@@ -151,21 +168,51 @@
                     [:setfont {:name "FreeSans" :size 12}]
                     [:moveto {:x 10 :y (bic.eps-y 100 20)}]
                     [:show {:str "Hi"}]]
-                   result))))
+                   result)
+            "Example :eps output on successful processing.")
 
-    (testing "text - mixed ASCII and non-ASCII"
-      (let [[issue result] (bic.dsl {:target :eps}
-                                    [:bic {:width 200 :height 100}
-                                     [:text {:x 10 :y 20 :font "FreeSans" :size 12
-                                             :str "A☺B"}]])]
-        (is (nil? issue))
-        (is (deep= [:eps {:width 200 :height 100}
-                    [:setfont {:name "FreeSans" :size 12}]
-                    [:moveto {:x 10 :y (bic.eps-y 100 20)}]
-                    [:show {:str "A"}]
-                    [:glyphshow {:name "smileface"}]
-                    [:show {:str "B"}]]
-                   result))))
+        (let [font-output (-> result (. 3))]
+          (is (= :setfont (-> font-output (. 1))) ":eps :setfont operator is set")
+          (is (= "FreeSans" (-> font-output
+                              (. 2)
+                              (. :name))
+                   result)
+              "Font name is set if provided.")))
+
+        (testing "Font name is set to default if :font attribute is absent"
+          (tset _G :vic_font "FreeSans")
+          (tset _G :vic_size 12)
+          (let [[issue result] (bic.dsl {:target :eps}
+                                        [:bic {:width 200 :height 100}
+                                         [:text {:x 10 :y 20 :str "Hi"}]])]
+            (is (nil? issue))
+            (is (= "FreeSans" (?. result 3 2 :name))
+                "Font name is set to default if :font attribute is absent")
+            
+            (is (= 12 (?. result 3 2 :size))
+                "Font size is set to default if :size attribute is absent")))
+
+
+        (testing "missing font/size with no globals still fails validation"
+          (let [[issue _result] (bic.dsl {:target :eps}
+                                         [:bic {:width 200 :height 100}
+                                          [:text {:x 10 :y 20 :str "Hi"}]])]
+            (is (= :error issue.level))))
+
+      (testing "mixed ASCII and non-ASCII"
+        (let [[issue result] (bic.dsl {:target :eps}
+                                      [:bic {:width 200 :height 100}
+                                       [:text {:x 10 :y 20 :font "FreeSans" :size 12
+                                               :str "A☺B"}]])]
+          (is (nil? issue))
+          (is (deep= [:eps {:width 200 :height 100}
+                      [:setfont {:name "FreeSans" :size 12}]
+                      [:moveto {:x 10 :y (bic.eps-y 100 20)}]
+                      [:show {:str "A"}]
+                      [:glyphshow {:name "smileface"}]
+                      [:show {:str "B"}]]
+                     result))))
+      )
 
     (testing "measurements"
       (let [[issue result] (bic.dsl {:target :eps}
@@ -178,6 +225,8 @@
         (testing "[72 :pt] converts to 72"
           (is (= 72 (-> result (. 2) (. :height))) result))
         )))
+
+
 
   (testing "document wrapper → SVG"
     (let [[issue result] (bic.dsl {:target :svg}

@@ -203,7 +203,9 @@
       (if bic-issue
         [bic-issue nil]
         (let [resolved-bic (resolve-attrs grammar.bic attrs target)
-              ctx          {:width resolved-bic.width :height resolved-bic.height}
+              ctx          {:width resolved-bic.width :height resolved-bic.height
+                            :font  _G.vic_font
+                            :size  _G.vic_size}
               children     []]
           (var issue nil)
           (for [idx 3 (length node) &until issue]
@@ -211,19 +213,28 @@
                   prim-tag   (. child 1)
                   prim-attrs (. child 2)
                   prim-entry (. schema prim-tag)]
-              (when (= nil prim-entry)
-                (set issue {:level :error
-                            :type  :bic/unknown-primitive
-                            :msg   (.. "unknown primitive: " (tostring prim-tag))}))
-              (when (= nil issue)
-                (let [val-issue (validator.validate prim-entry.schema prim-attrs)]
-                  (when val-issue (set issue val-issue))))
-              (when (= nil issue)
-                (let [resolved-prim (resolve-attrs prim-entry.schema prim-attrs target)
-                      [tr-issue nodes] ((. prim-entry.resolver target) resolved-prim ctx)]
-                  (when tr-issue (set issue tr-issue))
-                  (each [_ x (ipairs nodes)]
-                    (table.insert children x))))))
+              (let [prim-attrs (if (= prim-tag :text)
+                                 (let [merged {}]
+                                   (each [ky vl (pairs prim-attrs)] (tset merged ky vl))
+                                   (when (and (= nil merged.font) ctx.font)
+                                     (tset merged :font ctx.font))
+                                   (when (and (= nil merged.size) ctx.size)
+                                     (tset merged :size ctx.size))
+                                   merged)
+                                 prim-attrs)]
+                (when (= nil prim-entry)
+                  (set issue {:level :error
+                              :type  :bic/unknown-primitive
+                              :msg   (.. "unknown primitive: " (tostring prim-tag))}))
+                (when (= nil issue)
+                  (let [val-issue (validator.validate prim-entry.schema prim-attrs)]
+                    (when val-issue (set issue val-issue))))
+                (when (= nil issue)
+                  (let [resolved-prim (resolve-attrs prim-entry.schema prim-attrs target)
+                        [tr-issue nodes] ((. prim-entry.resolver target) resolved-prim ctx)]
+                    (when tr-issue (set issue tr-issue))
+                    (each [_ x (ipairs nodes)]
+                      (table.insert children x)))))))
           (if issue
             [issue nil]
             (let [doc (if (= target :svg)

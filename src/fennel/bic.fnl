@@ -2,68 +2,9 @@
 (local grammar (require :src.fennel.grammar))
 (local eps (require :src.fennel.eps))
 (local xml (require :src.fennel.xml))
-(local {: nil? : number? : string? } (require :src.fennel.core))
+(local {: nil?} (require :src.fennel.core))
 
 (fn eps-y [height y] (- height y))
-
-;;; Bic node schema
-
-(local bic-node-schema
-  [:map
-   [:width  {:error-type :grammar/measurement} [:or number? grammar.measurement]]
-   [:height {:error-type :grammar/measurement} [:or number? grammar.measurement]]])
-
-;;; Resolvers
-
-(local resolvers
-  {:eps {:grammar/measurement
-         (fn [value]
-          (if (= :number (type value))
-            value
-            (match (. value 2)
-              :pt (. value 1)
-              :in (* (. value 1) 72)
-              :pc (* (. value 1) 12))))}
-   :svg {:grammar/measurement
-         (fn [value]
-          (if (= :number (type value))
-            value
-            (match (. value 2)
-              :pt (.. (. value 1) :pt)
-              :in (.. (. value 1) :in)
-              :pc (.. (. value 1) :pc))))}})
-
-(fn resolve-grammar [value target]
-  (if (= :grammar/measurement (type value))
-    value
-    ((. (. resolvers target) :grammar/measurement) value)))
-
-;;; Schema
-
-(local schema
-  {:rect   [:map
-            [:x            number?]
-            [:y            number?]
-            [:width        number?]
-            [:height       number?]
-            [:rx           {:optional true} number?]
-            [:ry           {:optional true} number?]
-            [:fill         {:optional true} string?]
-            [:stroke       {:optional true} string?]
-            [:stroke-width {:optional true} number?]]
-   :circle [:map
-            [:cx           number?]
-            [:cy           number?]
-            [:r            number?]
-            [:fill         {:optional true} string?]
-            [:stroke       {:optional true} string?]
-            [:stroke-width {:optional true} number?]]
-   :text   [:map
-            [:x    number?]
-            [:y    number?]
-            [:font string?]
-            [:size number?]
-            [:str  string?]]})
 
 ;;; Color
 
@@ -77,10 +18,26 @@
    :cyan    {:r 0 :g 1 :b 1}
    :magenta {:r 1 :g 0 :b 1}})
 
-;;; Translators
+;;; Resolvers
 
-(local translators
-  {:rect
+(local resolvers
+  {:measurement
+   {:eps (fn [value]
+           (if (= :number (type value))
+             value
+             (match (. value 2)
+               :pt (. value 1)
+               :in (* (. value 1) 72)
+               :pc (* (. value 1) 12))))
+    :svg (fn [value]
+           (if (= :number (type value))
+             value
+             (match (. value 2)
+               :pt (.. (. value 1) :pt)
+               :in (.. (. value 1) :in)
+               :pc (.. (. value 1) :pc))))}
+
+   :rect
    {:svg (fn [attrs _ctx]
            [nil [[:rect attrs]]])
     :eps (fn [attrs ctx]
@@ -151,10 +108,10 @@
 
    :text
    {:svg (fn [attrs _ctx]
-           [nil [[:text {:x          attrs.x
-                         :y          attrs.y
+           [nil [[:text {:x           attrs.x
+                         :y           attrs.y
                          :font-family attrs.font
-                         :font-size  attrs.size}
+                         :font-size   attrs.size}
                   attrs.str]]])
     :eps (fn [attrs ctx]
            (let [nodes []
@@ -210,6 +167,30 @@
                (table.insert nodes [:stroke]))
              [nil nodes]))}})
 
+;;; Schema
+
+(local schema
+  {:rect   {:schema grammar.rect   :resolver resolvers.rect}
+   :circle {:schema grammar.circle :resolver resolvers.circle}
+   :text   {:schema grammar.text   :resolver resolvers.text}})
+
+;;; Attribute resolver
+
+(fn resolve-attrs [prim-schema attrs target]
+  (let [resolved {}]
+    (each [key val (pairs attrs)]
+      (tset resolved key val))
+    (for [ii 2 (length prim-schema)]
+      (let [entry      (. prim-schema ii)
+            key        (. entry 1)
+            has-opts   (= 3 (length entry))
+            sub-schema (if has-opts (. entry 3) (. entry 2))]
+        (when (and (= sub-schema grammar.measurement) (not= nil (. attrs key)))
+          (tset resolved key ((. resolvers.measurement target) (. attrs key))))))
+    resolved))
+
+;;; DSL
+
 (fn dsl [opts node]
   (local node (if (nil? node) opts node))
   (local opts (if (nil? node) {} opts))
@@ -218,38 +199,37 @@
         target (or opts.target :eps)]
     (when (not= tag :bic)
       (error (.. "bic: expected :bic tag, got " (tostring tag))))
-    (let [bic-issue (validator.validate bic-node-schema attrs)]
+    (let [bic-issue (validator.validate grammar.bic attrs)]
       (if bic-issue
         [bic-issue nil]
-        (let [ww       (resolve-grammar attrs.width target)
-              hh       (resolve-grammar attrs.height target)
-              ctx      {:width ww :height hh}
-              children []]
+        (let [resolved-bic (resolve-attrs grammar.bic attrs target)
+              ctx          {:width resolved-bic.width :height resolved-bic.height}
+              children     []]
           (var issue nil)
           (for [idx 3 (length node) &until issue]
             (let [child      (. node idx)
                   prim-tag   (. child 1)
                   prim-attrs (. child 2)
-                  prim-schema (. schema prim-tag)]
-              (when (= nil prim-schema)
+                  prim-entry (. schema prim-tag)]
+              (when (= nil prim-entry)
                 (set issue {:level :error
                             :type  :bic/unknown-primitive
                             :msg   (.. "unknown primitive: " (tostring prim-tag))}))
               (when (= nil issue)
-                (let [val-issue (validator.validate prim-schema prim-attrs)]
+                (let [val-issue (validator.validate prim-entry.schema prim-attrs)]
                   (when val-issue (set issue val-issue))))
               (when (= nil issue)
-                (let [translator (. (. translators prim-tag) target)
-                      [tr-issue nodes] (translator prim-attrs ctx)]
+                (let [resolved-prim (resolve-attrs prim-entry.schema prim-attrs target)
+                      [tr-issue nodes] ((. prim-entry.resolver target) resolved-prim ctx)]
                   (when tr-issue (set issue tr-issue))
-                  (each [_ x (ipairs nodes)]
-                    (table.insert children x))))))
+                  (each [_ xx (ipairs nodes)]
+                    (table.insert children xx))))))
           (if issue
             [issue nil]
             (let [doc (if (= target :svg)
                         [:svg {:xmlns "http://www.w3.org/2000/svg"
-                               :width ww :height hh}]
-                        [:eps {:width ww :height hh}])]
+                               :width resolved-bic.width :height resolved-bic.height}]
+                        [:eps {:width resolved-bic.width :height resolved-bic.height}])]
               (each [_ child (ipairs children)]
                 (table.insert doc child))
               [nil doc])))))))

@@ -1,5 +1,39 @@
-(local {: number?} (require :src.fennel.core))
+(local {: number? : string?} (require :src.fennel.core))
 
-(local measurement [:tuple number? [:enum :in :pt :pc]])
+(local measurement [:or number? [:tuple number? [:enum :in :pt :pc]]])
 
-{: measurement}
+(local bic
+  [:map
+   [:width  {:error-type :grammar/measurement} measurement]
+   [:height {:error-type :grammar/measurement} measurement]])
+
+(local rect
+  [:map
+   [:x            measurement]
+   [:y            measurement]
+   [:width        measurement]
+   [:height       measurement]
+   [:rx           {:optional true} measurement]
+   [:ry           {:optional true} measurement]
+   [:fill         {:optional true} string?]
+   [:stroke       {:optional true} string?]
+   [:stroke-width {:optional true} measurement]])
+
+(local circle
+  [:map
+   [:cx           measurement]
+   [:cy           measurement]
+   [:r            measurement]
+   [:fill         {:optional true} string?]
+   [:stroke       {:optional true} string?]
+   [:stroke-width {:optional true} measurement]])
+
+(local text
+  [:map
+   [:x    measurement]
+   [:y    measurement]
+   [:font string?]
+   [:size measurement]
+   [:str  string?]])
+
+{: measurement : bic : rect : circle : text}

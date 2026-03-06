@@ -31,139 +31,169 @@
                              [:rect {:x 10 :y 20 :width 80 :height 40}]])]
       (is (= :eps (?. result 1)))))
 
-  (testing "rect → SVG"
-    (let [[issue result] (bic.dsl {:target :svg}
+  (testing "translation to SVG"
+    (testing "rect"
+      (let [[issue result] (bic.dsl {:target :svg}
                                      [:bic {:width 200 :height 100}
                                       [:rect {:x 10 :y 20 :width 80 :height 40}]])]
       (is (nil? issue))
       (is (deep= (svg {} [:rect {:x 10 :y 20 :width 80 :height 40}])
                  result))))
 
-  (testing "rect with rx → SVG passthrough"
-    (let [[issue result] (bic.dsl {:target :svg}
-                                     [:bic {:width 200 :height 100}
-                                      [:rect {:x 10 :y 20 :width 80 :height 40 :rx 8}]])]
-      (is (nil? issue))
-      (is (deep= (svg {} [:rect {:x 10 :y 20 :width 80 :height 40 :rx 8}])
-                 result))))
+    (testing "rect with rx"
+      (let [[issue result] (bic.dsl {:target :svg}
+                                    [:bic {:width 200 :height 100}
+                                     [:rect {:x 10 :y 20 :width 80 :height 40 :rx 8}]])]
+        (is (nil? issue))
+        (is (deep= (svg {} [:rect {:x 10 :y 20 :width 80 :height 40 :rx 8}])
+                   result))))
 
-  (testing "circle → SVG"
-    (let [[issue result]
-         (bic.dsl {:target :svg}
+    (testing "circle"
+      (let [[issue result]
+            (bic.dsl {:target :svg}
                      [:bic {:width 200 :height 100}
-                           [:circle {:cx 50 :cy 50 :r 30}]])]
-      (is (nil? issue))
-      (is (deep= (svg {} [:circle {:cx 50 :cy 50 :r 30}])
-                 result))))
+                      [:circle {:cx 50 :cy 50 :r 30}]])]
+        (is (nil? issue))
+        (is (deep= (svg {} [:circle {:cx 50 :cy 50 :r 30}])
+                   result))))
 
-  (testing "rect → EPS with y-flip"
-    (let [[issue result] (bic.dsl {:target :eps}
-                                     [:bic {:width 200 :height 100}
-                                      [:rect {:x 10 :y 20 :width 80 :height 40}]])]
-      (is (nil? issue))
-      (is (deep= [:eps {:width 200 :height 100}
-                  [:rectstroke {:x 10 :y 40 :w 80 :h 40}]]
-                 result))))
+    (testing "text"
+      (let [[issue result] (bic.dsl {:target :svg}
+                                    [:bic {:width 200 :height 100}
+                                     [:text {:x 10 :y 20 :font "FreeSans" :size 12
+                                             :str "Hello"}]])]
+        (is (nil? issue))
+        (is (deep= (svg {} [:text {:x 10 :y 20 :font-family "FreeSans"
+                                   :font-size 12} "Hello"])
+                   result))))
 
-  (testing "rect with rx → EPS path decomposition"
-    (let [[issue result] (bic.dsl {:target :eps}
-                                     [:bic {:width 200 :height 100}
-                                      [:rect {:x 10 :y 20 :width 80 :height 40 :rx 8}]])]
-      (is (nil? issue))
-      (is (deep= [:eps {:width 200 :height 100}
-                  [:newpath]
-                  [:moveto {:x 18 :y 40}]
-                  [:lineto {:x 82 :y 40}]
-                  [:arc {:cx 82 :cy 48 :r 8 :a1 270 :a2 0}]
-                  [:lineto {:x 90 :y 72}]
-                  [:arc {:cx 82 :cy 72 :r 8 :a1 0 :a2 90}]
-                  [:lineto {:x 18 :y 80}]
-                  [:arc {:cx 18 :cy 72 :r 8 :a1 90 :a2 180}]
-                  [:lineto {:x 10 :y 48}]
-                  [:arc {:cx 18 :cy 48 :r 8 :a1 180 :a2 270}]
-                  [:closepath]
-                  [:stroke]]
-                 result))))
+    (testing "text - non-ASCII character passes through as UTF-8"
+      (let [[issue result] (bic.dsl {:target :svg}
+                                    [:bic {:width 200 :height 100}
+                                     [:text {:x 10 :y 20 :font "FreeSans" :size 12
+                                             :str "☺"}]])]
+        (is (nil? issue))
+        (is (deep= (svg {} [:text {:x 10 :y 20 :font-family "FreeSans"
+                                   :font-size 12} "☺"])
+                   result))))
 
-  (testing "circle → EPS with y-flip"
-    (let [[issue result] (bic.dsl {:target :eps}
-                                     [:bic {:width 200 :height 100}
-                                      [:circle {:cx 50 :cy 30 :r 20}]])]
-      (is (nil? issue))
-      (is (deep= [:eps {:width 200 :height 100}
-                  [:newpath]
-                  [:arc {:cx 50 :cy 70 :r 20 :a1 0 :a2 360}]
-                  [:stroke]]
-                 result))))
+    (testing "text - non-ASCII codepoint emits glyphshow with post table name"
+      (let [[issue result] (bic.dsl {:target :eps}
+                                    [:bic {:width 200 :height 100}
+                                     [:text {:x 10 :y 20 :font "FreeSans" :size 12
+                                             :str "☺"}]])]
+        (is (nil? issue))
+        (is (deep= [:eps {:width 200 :height 100}
+                    [:setfont {:name "FreeSans" :size 12}]
+                    [:moveto {:x 10 :y (bic.eps-y 100 20)}]
+                    [:glyphshow {:name "smileface"}]]
+                   result))))
+
+    (testing "measurement dims [:in 1] [:pt 72] → SVG doc with {:width \"1in\" :height \"72pt\"}"
+      (let [[issue result] (bic.dsl {:target :svg}
+                                    [:bic {:width [1 :in] :height [72 :pt]}])]
+        (is (nil? issue))
+
+        (testing "[1 :in] converts to 1in"
+          (is (= "1in" (-> result (. 2) (. :width))) result))
+
+        (testing "[72 :pt] converts to 72pt"
+          (is (= "72pt" (-> result (. 2) (. :height))) result)))))
+
+  (testing "translation to EPS"
+    (testing "rect"
+      (let [[issue result] (bic.dsl {:target :eps}
+                                    [:bic {:width 200 :height 100}
+                                     [:rect {:x 10 :y 20 :width 80 :height 40}]])]
+        (is (nil? issue))
+        (is (deep= [:eps {:width 200 :height 100}
+                    [:rectstroke {:x 10 :y 40 :w 80 :h 40}]]
+                   result))))
+
+    (testing "rect with rx"
+      (let [[issue result] (bic.dsl {:target :eps}
+                                    [:bic {:width 200 :height 100}
+                                     [:rect {:x 10 :y 20 :width 80 :height 40 :rx 8}]])]
+        (is (nil? issue))
+        (is (deep= [:eps {:width 200 :height 100}
+                    [:newpath]
+                    [:moveto {:x 18 :y 40}]
+                    [:lineto {:x 82 :y 40}]
+                    [:arc {:cx 82 :cy 48 :r 8 :a1 270 :a2 0}]
+                    [:lineto {:x 90 :y 72}]
+                    [:arc {:cx 82 :cy 72 :r 8 :a1 0 :a2 90}]
+                    [:lineto {:x 18 :y 80}]
+                    [:arc {:cx 18 :cy 72 :r 8 :a1 90 :a2 180}]
+                    [:lineto {:x 10 :y 48}]
+                    [:arc {:cx 18 :cy 48 :r 8 :a1 180 :a2 270}]
+                    [:closepath]
+                    [:stroke]]
+                   result))))
+
+    (testing "circle"
+      (let [[issue result] (bic.dsl {:target :eps}
+                                    [:bic {:width 200 :height 100}
+                                     [:circle {:cx 50 :cy 30 :r 20}]])]
+        (is (nil? issue))
+        (is (deep= [:eps {:width 200 :height 100}
+                    [:newpath]
+                    [:arc {:cx 50 :cy 70 :r 20 :a1 0 :a2 360}]
+                    [:stroke]]
+                   result))))
+
+    (testing "text - ASCII-only string"
+      (let [[issue result] (bic.dsl {:target :eps}
+                                    [:bic {:width 200 :height 100}
+                                     [:text {:x 10 :y 20 :font "FreeSans" :size 12
+                                             :str "Hi"}]])]
+        (is (nil? issue))
+        (is (deep= [:eps {:width 200 :height 100}
+                    [:setfont {:name "FreeSans" :size 12}]
+                    [:moveto {:x 10 :y (bic.eps-y 100 20)}]
+                    [:show {:str "Hi"}]]
+                   result))))
+
+    (testing "text - mixed ASCII and non-ASCII"
+      (let [[issue result] (bic.dsl {:target :eps}
+                                    [:bic {:width 200 :height 100}
+                                     [:text {:x 10 :y 20 :font "FreeSans" :size 12
+                                             :str "A☺B"}]])]
+        (is (nil? issue))
+        (is (deep= [:eps {:width 200 :height 100}
+                    [:setfont {:name "FreeSans" :size 12}]
+                    [:moveto {:x 10 :y (bic.eps-y 100 20)}]
+                    [:show {:str "A"}]
+                    [:glyphshow {:name "smileface"}]
+                    [:show {:str "B"}]]
+                   result))))
+
+    (testing "measurements"
+      (let [[issue result] (bic.dsl {:target :eps}
+                                    [:bic {:width [1 :in] :height [72 :pt]}])]
+        (is (nil? issue))
+
+        (testing "[1 :in] converts to 72"
+          (is (= 72 (-> result (. 2) (. :width))) result))
+
+        (testing "[72 :pt] converts to 72"
+          (is (= 72 (-> result (. 2) (. :height))) result))
+        )))
 
   (testing "document wrapper → SVG"
     (let [[issue result] (bic.dsl {:target :svg}
-                                     [:bic {:width 200 :height 100}])]
+                                  [:bic {:width 200 :height 100}])]
       (is (nil? issue))
       (is (deep= (svg {}) result))))
 
   (testing "document wrapper → EPS"
     (let [[issue result] (bic.dsl {:target :eps}
-                                     [:bic {:width 200 :height 100}])]
+                                  [:bic {:width 200 :height 100}])]
       (is (nil? issue))
       (is (deep= [:eps {:width 200 :height 100}] result))))
 
-  (testing "text → SVG"
-    (let [[issue result] (bic.dsl {:target :svg}
-                                     [:bic {:width 200 :height 100}
-                                      [:text {:x 10 :y 20 :font "FreeSans" :size 12
-                                              :str "Hello"}]])]
-      (is (nil? issue))
-      (is (deep= (svg {} [:text {:x 10 :y 20 :font-family "FreeSans"
-                                 :font-size 12} "Hello"])
-                 result))))
-
-  (testing "text → SVG: non-ASCII character passes through as UTF-8"
-    (let [[issue result] (bic.dsl {:target :svg}
-                                     [:bic {:width 200 :height 100}
-                                      [:text {:x 10 :y 20 :font "FreeSans" :size 12
-                                              :str "☺"}]])]
-      (is (nil? issue))
-      (is (deep= (svg {} [:text {:x 10 :y 20 :font-family "FreeSans"
-                                 :font-size 12} "☺"])
-                 result))))
-
-  (testing "text → EPS: ASCII-only string"
-    (let [[issue result] (bic.dsl {:target :eps}
-                                     [:bic {:width 200 :height 100}
-                                      [:text {:x 10 :y 20 :font "FreeSans" :size 12
-                                              :str "Hi"}]])]
-      (is (nil? issue))
-      (is (deep= [:eps {:width 200 :height 100}
-                  [:setfont {:name "FreeSans" :size 12}]
-                  [:moveto {:x 10 :y (bic.eps-y 100 20)}]
-                  [:show {:str "Hi"}]]
-                 result))))
-
-  (testing "text → EPS: non-ASCII codepoint emits glyphshow with post table name"
-    (let [[issue result] (bic.dsl {:target :eps}
-                                     [:bic {:width 200 :height 100}
-                                      [:text {:x 10 :y 20 :font "FreeSans" :size 12
-                                              :str "☺"}]])]
-      (is (nil? issue))
-      (is (deep= [:eps {:width 200 :height 100}
-                  [:setfont {:name "FreeSans" :size 12}]
-                  [:moveto {:x 10 :y (bic.eps-y 100 20)}]
-                  [:glyphshow {:name "smileface"}]]
-                 result))))
-
-  (testing "text → EPS: mixed ASCII and non-ASCII"
-    (let [[issue result] (bic.dsl {:target :eps}
-                                     [:bic {:width 200 :height 100}
-                                      [:text {:x 10 :y 20 :font "FreeSans" :size 12
-                                              :str "A☺B"}]])]
-      (is (nil? issue))
-      (is (deep= [:eps {:width 200 :height 100}
-                  [:setfont {:name "FreeSans" :size 12}]
-                  [:moveto {:x 10 :y (bic.eps-y 100 20)}]
-                  [:show {:str "A"}]
-                  [:glyphshow {:name "smileface"}]
-                  [:show {:str "B"}]]
-                 result)))))
+  (testing "invalid dimension (string) returns :grammar/measurement error"
+    (let [[issue _result] (bic.dsl [:bic {:width "bad" :height 100}])]
+      (is (= :error issue.level))
+      (is (= :grammar/measurement issue.type)))))
 
 (run-tests)

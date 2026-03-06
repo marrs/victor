@@ -1,6 +1,6 @@
 (import-macros {: deftest : is : run-tests : testing} :src.fennel.test)
 (local validator (require :src.fennel.validator))
-(local {: nil? : number?} (require :src.fennel.core))
+(local {: nil? : number? : string?} (require :src.fennel.core))
 
 (deftest validator.validate
   (testing "valid value against a map schema returns nil"
@@ -34,6 +34,39 @@
     (let [result (validator.validate [:map [:x number?] [:y {:optional true} number?]] {:x 1 :y "bad"})]
       (is (= :error result.level))
       (is (= :validator/wrong-type result.type))
-      (is (= "wrong type for key: :y" result.msg)))))
+      (is (= "wrong type for key: :y" result.msg))))
+
+  (testing ":enum"
+    (testing "matching value returns nil"
+      (is (nil? (validator.validate [:map [:color [:enum :red :green :blue]]] {:color :red}))))
+    (testing "non-matching value returns error"
+      (let [result (validator.validate [:map [:color [:enum :red :green :blue]]] {:color :purple})]
+        (is (= :error result.level))
+        (is (= :validator/wrong-type result.type)))))
+
+  (testing ":tuple"
+    (testing "correct shape returns nil"
+      (is (nil? (validator.validate [:map [:pt [:tuple number? number?]]] {:pt [1 2]}))))
+    (testing "wrong length returns error"
+      (let [result (validator.validate [:map [:pt [:tuple number? number?]]] {:pt [1]})]
+        (is (= :error result.level))))
+    (testing "element type mismatch returns error"
+      (let [result (validator.validate [:map [:pt [:tuple number? number?]]] {:pt [1 "bad"]})]
+        (is (= :error result.level)))))
+
+  (testing ":or"
+    (testing "matches first alternative returns nil"
+      (is (nil? (validator.validate [:map [:x [:or number? string?]]] {:x 42}))))
+    (testing "matches second alternative returns nil"
+      (is (nil? (validator.validate [:map [:x [:or number? string?]]] {:x "hello"}))))
+    (testing "matches neither returns error"
+      (let [result (validator.validate [:map [:x [:or number? string?]]] {:x true})]
+        (is (= :error result.level)))))
+
+  (testing ":error-type in map entry"
+    (testing "error carries custom type on failure"
+      (let [result (validator.validate [:map [:width {:error-type :custom/type} number?]] {:width "bad"})]
+        (is (= :error result.level))
+        (is (= :custom/type result.type))))))
 
 (run-tests)

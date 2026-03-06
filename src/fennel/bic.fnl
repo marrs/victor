@@ -1,9 +1,42 @@
 (local validator (require :src.fennel.validator))
+(local grammar (require :src.fennel.grammar))
 (local eps (require :src.fennel.eps))
 (local xml (require :src.fennel.xml))
 (local {: nil? : number? : string? } (require :src.fennel.core))
 
 (fn eps-y [height y] (- height y))
+
+;;; Bic node schema
+
+(local bic-node-schema
+  [:map
+   [:width  {:error-type :grammar/measurement} [:or number? grammar.measurement]]
+   [:height {:error-type :grammar/measurement} [:or number? grammar.measurement]]])
+
+;;; Resolvers
+
+(local resolvers
+  {:eps {:grammar/measurement
+         (fn [value]
+          (if (= :number (type value))
+            value
+            (match (. value 2)
+              :pt (. value 1)
+              :in (* (. value 1) 72)
+              :pc (* (. value 1) 12))))}
+   :svg {:grammar/measurement
+         (fn [value]
+          (if (= :number (type value))
+            value
+            (match (. value 2)
+              :pt (.. (. value 1) :pt)
+              :in (.. (. value 1) :in)
+              :pc (.. (. value 1) :pc))))}})
+
+(fn resolve-grammar [value target]
+  (if (= :grammar/measurement (type value))
+    value
+    ((. (. resolvers target) :grammar/measurement) value)))
 
 ;;; Schema
 
@@ -185,36 +218,41 @@
         target (or opts.target :eps)]
     (when (not= tag :bic)
       (error (.. "bic: expected :bic tag, got " (tostring tag))))
-    (let [ctx      {:width attrs.width :height attrs.height}
-          children []]
-      (var issue nil)
-      (for [idx 3 (length node) &until issue]
-        (let [child      (. node idx)
-              prim-tag   (. child 1)
-              prim-attrs (. child 2)
-              prim-schema (. schema prim-tag)]
-          (when (= nil prim-schema)
-            (set issue {:level :error
-                        :type  :bic/unknown-primitive
-                        :msg   (.. "unknown primitive: " (tostring prim-tag))}))
-          (when (= nil issue)
-            (let [val-issue (validator.validate prim-schema prim-attrs)]
-              (when val-issue (set issue val-issue))))
-          (when (= nil issue)
-            (let [translator (. (. translators prim-tag) target)
-                  [tr-issue nodes] (translator prim-attrs ctx)]
-              (when tr-issue (set issue tr-issue))
-              (each [_ x (ipairs nodes)]
-                (table.insert children x))))))
-      (if issue
-        [issue nil]
-        (let [doc (if (= target :svg)
-                    [:svg {:xmlns "http://www.w3.org/2000/svg"
-                           :width attrs.width :height attrs.height}]
-                    [:eps {:width attrs.width :height attrs.height}])]
-          (each [_ child (ipairs children)]
-            (table.insert doc child))
-          [nil doc])))))
+    (let [bic-issue (validator.validate bic-node-schema attrs)]
+      (if bic-issue
+        [bic-issue nil]
+        (let [ww       (resolve-grammar attrs.width target)
+              hh       (resolve-grammar attrs.height target)
+              ctx      {:width ww :height hh}
+              children []]
+          (var issue nil)
+          (for [idx 3 (length node) &until issue]
+            (let [child      (. node idx)
+                  prim-tag   (. child 1)
+                  prim-attrs (. child 2)
+                  prim-schema (. schema prim-tag)]
+              (when (= nil prim-schema)
+                (set issue {:level :error
+                            :type  :bic/unknown-primitive
+                            :msg   (.. "unknown primitive: " (tostring prim-tag))}))
+              (when (= nil issue)
+                (let [val-issue (validator.validate prim-schema prim-attrs)]
+                  (when val-issue (set issue val-issue))))
+              (when (= nil issue)
+                (let [translator (. (. translators prim-tag) target)
+                      [tr-issue nodes] (translator prim-attrs ctx)]
+                  (when tr-issue (set issue tr-issue))
+                  (each [_ x (ipairs nodes)]
+                    (table.insert children x))))))
+          (if issue
+            [issue nil]
+            (let [doc (if (= target :svg)
+                        [:svg {:xmlns "http://www.w3.org/2000/svg"
+                               :width ww :height hh}]
+                        [:eps {:width ww :height hh}])]
+              (each [_ child (ipairs children)]
+                (table.insert doc child))
+              [nil doc])))))))
 
 (fn render [opts node]
   (let [[err output] (dsl opts node)]

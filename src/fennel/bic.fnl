@@ -41,13 +41,13 @@
    {:svg (fn [attrs _ctx]
            [nil [[:rect attrs]]])
     :eps (fn [attrs ctx]
-           (let [xx    attrs.x
+           (let [xpos    attrs.x
                  ysvg  attrs.y
-                 ww    attrs.width
-                 hh    attrs.height
+                 wd    attrs.width
+                 ht    attrs.height
                  rx    attrs.rx
                  ry    attrs.ry
-                 yeps  (eps-y ctx.height (+ ysvg hh))
+                 ypos  (eps-y ctx.height (+ ysvg ht))
                  nodes []]
              (if (or rx ry)
                (let [rx (or rx ry)
@@ -56,37 +56,37 @@
                    ;; circular corners — use arc
                    (do
                      (table.insert nodes [:newpath])
-                     (table.insert nodes [:moveto {:x (+ xx rx) :y yeps}])
-                     (table.insert nodes [:lineto {:x (- (+ xx ww) rx) :y yeps}])
-                     (table.insert nodes [:arc {:cx (- (+ xx ww) rx) :cy (+ yeps rx) :r rx :a1 270 :a2 0}])
-                     (table.insert nodes [:lineto {:x (+ xx ww) :y (- (+ yeps hh) rx)}])
-                     (table.insert nodes [:arc {:cx (- (+ xx ww) rx) :cy (- (+ yeps hh) rx) :r rx :a1 0 :a2 90}])
-                     (table.insert nodes [:lineto {:x (+ xx rx) :y (+ yeps hh)}])
-                     (table.insert nodes [:arc {:cx (+ xx rx) :cy (- (+ yeps hh) rx) :r rx :a1 90 :a2 180}])
-                     (table.insert nodes [:lineto {:x xx :y (+ yeps rx)}])
-                     (table.insert nodes [:arc {:cx (+ xx rx) :cy (+ yeps rx) :r rx :a1 180 :a2 270}])
+                     (table.insert nodes [:moveto {:x (+ xpos rx) :y ypos}])
+                     (table.insert nodes [:lineto {:x (- (+ xpos wd) rx) :y ypos}])
+                     (table.insert nodes [:arc {:cx (- (+ xpos wd) rx) :cy (+ ypos rx) :r rx :a1 270 :a2 0}])
+                     (table.insert nodes [:lineto {:x (+ xpos wd) :y (- (+ ypos ht) rx)}])
+                     (table.insert nodes [:arc {:cx (- (+ xpos wd) rx) :cy (- (+ ypos ht) rx) :r rx :a1 0 :a2 90}])
+                     (table.insert nodes [:lineto {:x (+ xpos rx) :y (+ ypos ht)}])
+                     (table.insert nodes [:arc {:cx (+ xpos rx) :cy (- (+ ypos ht) rx) :r rx :a1 90 :a2 180}])
+                     (table.insert nodes [:lineto {:x xpos :y (+ ypos rx)}])
+                     (table.insert nodes [:arc {:cx (+ xpos rx) :cy (+ ypos rx) :r rx :a1 180 :a2 270}])
                      (table.insert nodes [:closepath])
                      (table.insert nodes [:stroke]))
                    ;; elliptical corners — approximate with curveto
                    (let [kk 0.5523]
                      (table.insert nodes [:newpath])
-                     (table.insert nodes [:moveto {:x (+ xx rx) :y yeps}])
-                     (table.insert nodes [:lineto {:x (- (+ xx ww) rx) :y yeps}])
-                     (table.insert nodes [:curveto {:x1 (- (+ xx ww) (* kk rx)) :y1 yeps
-                                                    :x2 (+ xx ww) :y2 (+ yeps (* kk ry))
-                                                    :x3 (+ xx ww) :y3 (+ yeps ry)}])
-                     (table.insert nodes [:lineto {:x (+ xx ww) :y (- (+ yeps hh) ry)}])
-                     (table.insert nodes [:curveto {:x1 (+ xx ww) :y1 (- (+ yeps hh) (* kk ry))
-                                                    :x2 (- (+ xx ww) (* kk rx)) :y2 (+ yeps hh)
-                                                    :x3 (- (+ xx ww) rx) :y3 (+ yeps hh)}])
-                     (table.insert nodes [:lineto {:x (+ xx rx) :y (+ yeps hh)}])
-                     (table.insert nodes [:curveto {:x1 (+ xx (* kk rx)) :y1 (+ yeps hh)
-                                                    :x2 xx :y2 (- (+ yeps hh) (* kk ry))
-                                                    :x3 xx :y3 (- (+ yeps hh) ry)}])
-                     (table.insert nodes [:lineto {:x xx :y (+ yeps ry)}])
-                     (table.insert nodes [:curveto {:x1 xx :y1 (+ yeps (* kk ry))
-                                                    :x2 (+ xx (* kk rx)) :y2 yeps
-                                                    :x3 (+ xx rx) :y3 yeps}])
+                     (table.insert nodes [:moveto {:x (+ xpos rx) :y ypos}])
+                     (table.insert nodes [:lineto {:x (- (+ xpos wd) rx) :y ypos}])
+                     (table.insert nodes [:curveto {:x1 (- (+ xpos wd) (* kk rx)) :y1 ypos
+                                                    :x2 (+ xpos wd) :y2 (+ ypos (* kk ry))
+                                                    :x3 (+ xpos wd) :y3 (+ ypos ry)}])
+                     (table.insert nodes [:lineto {:x (+ xpos wd) :y (- (+ ypos ht) ry)}])
+                     (table.insert nodes [:curveto {:x1 (+ xpos wd) :y1 (- (+ ypos ht) (* kk ry))
+                                                    :x2 (- (+ xpos wd) (* kk rx)) :y2 (+ ypos ht)
+                                                    :x3 (- (+ xpos wd) rx) :y3 (+ ypos ht)}])
+                     (table.insert nodes [:lineto {:x (+ xpos rx) :y (+ ypos ht)}])
+                     (table.insert nodes [:curveto {:x1 (+ xpos (* kk rx)) :y1 (+ ypos ht)
+                                                    :x2 xpos :y2 (- (+ ypos ht) (* kk ry))
+                                                    :x3 xpos :y3 (- (+ ypos ht) ry)}])
+                     (table.insert nodes [:lineto {:x xpos :y (+ ypos ry)}])
+                     (table.insert nodes [:curveto {:x1 xpos :y1 (+ ypos (* kk ry))
+                                                    :x2 (+ xpos (* kk rx)) :y2 ypos
+                                                    :x3 (+ xpos rx) :y3 ypos}])
                      (table.insert nodes [:closepath])
                      (table.insert nodes [:stroke]))))
                ;; plain rect — rectfill / rectstroke
@@ -95,7 +95,7 @@
                    (let [rgb (. named-colors attrs.fill)]
                      (when rgb
                        (table.insert nodes [:setrgbcolor rgb])
-                       (table.insert nodes [:rectfill {:x xx :y yeps :w ww :h hh}]))))
+                       (table.insert nodes [:rectfill {:x xpos :y ypos :w wd :h ht}]))))
                  (when (or attrs.stroke (not attrs.fill))
                    (when attrs.stroke
                      (let [rgb (. named-colors attrs.stroke)]
@@ -103,7 +103,7 @@
                          (table.insert nodes [:setrgbcolor rgb]))))
                    (when attrs.stroke-width
                      (table.insert nodes [:setlinewidth {:w attrs.stroke-width}]))
-                   (table.insert nodes [:rectstroke {:x xx :y yeps :w ww :h hh}]))))
+                   (table.insert nodes [:rectstroke {:x xpos :y ypos :w wd :h ht}]))))
              [nil nodes]))}
 
    :text
@@ -115,9 +115,9 @@
                   attrs.str]]])
     :eps (fn [attrs ctx]
            (let [nodes []
-                 yeps  (eps-y ctx.height attrs.y)]
+                 ypos  (eps-y ctx.height attrs.y)]
              (table.insert nodes [:setfont {:name attrs.font :size attrs.size}])
-             (table.insert nodes [:moveto {:x attrs.x :y yeps}])
+             (table.insert nodes [:moveto {:x attrs.x :y ypos}])
              (var run [])
              (fn flush-run []
                (when (> (length run) 0)
@@ -143,8 +143,8 @@
    {:svg (fn [attrs _ctx]
            [nil [[:circle attrs]]])
     :eps (fn [attrs ctx]
-           (let [cyeps  (eps-y ctx.height attrs.cy)
-                 arc-op {:cx attrs.cx :cy cyeps :r attrs.r :a1 0 :a2 360}
+           (let [cypos  (eps-y ctx.height attrs.cy)
+                 arc-op {:cx attrs.cx :cy cypos :r attrs.r :a1 0 :a2 360}
                  nodes  []]
              ;; Fill pass
              (when attrs.fill
@@ -222,8 +222,8 @@
                 (let [resolved-prim (resolve-attrs prim-entry.schema prim-attrs target)
                       [tr-issue nodes] ((. prim-entry.resolver target) resolved-prim ctx)]
                   (when tr-issue (set issue tr-issue))
-                  (each [_ xx (ipairs nodes)]
-                    (table.insert children xx))))))
+                  (each [_ x (ipairs nodes)]
+                    (table.insert children x))))))
           (if issue
             [issue nil]
             (let [doc (if (= target :svg)

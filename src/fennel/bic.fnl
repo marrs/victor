@@ -247,7 +247,7 @@
 
 (fn render [opts node]
   (let [[err output] (dsl opts node)]
-    (if err (comment handle-error)
+    (if err (error (string.format "%s: %s" err.type err.msg) 2)
       (if (= :eps (. output 1))
         (eps.str output)
         (xml.str output)))))

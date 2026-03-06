@@ -18,7 +18,7 @@ SPEC_FILES = spec/main.cc spec/util.cc spec/font.cc spec/groff.cc \
 SVG_VIEWER = imv-x11 -b checks
 EPS_VIEWER = zathura
 
-.PHONY: all clean tags test smoketest $(SPECS)
+.PHONY: all clean tags test smoketest manual $(SPECS)
 
 all: target $(TARGET)
 
@@ -76,6 +76,9 @@ smoketest: target/smiley-svg-dsl.svg target/smiley-eps-dsl.ps \
 	$(EPS_VIEWER) target/smiley-bic-eps.ps &
 	$(EPS_VIEWER) target/test-groff.ps &
 	$(EPS_VIEWER) target/test-groff.pdf
+
+manual: $(TARGET)
+	$(MAKE) -C manual all
 
 tags:
 	ctags -R *

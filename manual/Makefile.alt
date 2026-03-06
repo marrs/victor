@@ -1,0 +1,46 @@
+SOURCES := $(wildcard src/*.me)
+INTER := $(patsubst src/%.me,inter/%.me,$(SOURCES))
+ASY_SOURCES := $(wildcard src/*.asy)
+ASY_INTER := $(patsubst src/%.asy,inter/%.eps,$(ASY_SOURCES))
+
+COVER := src/coversheet.pdf
+BACKPAGE := src/backpage.pdf
+
+report.pdf: $(COVER) inter/report-body.pdf $(BACKPAGE)
+	pdftk $(COVER) inter/report-body.pdf $(BACKPAGE) cat output $@
+
+inter/report-body.pdf: report.me $(INTER) $(ASY_INTER)
+	@mkdir -p inter
+	@touch inter/toc-data.me
+	groff -U -rTp=1 -me -dpaper=a4 -P-pa4 -mpdfmark -Tps report.me > /dev/null 2>&1 || true
+	@cp inter/toc-data-new.me inter/toc-data.me
+	groff -U -me -dpaper=a4 -P-pa4 -mpdfmark -Tps report.me | ps2pdf - $@
+
+diagrams/diagrams.pdf:
+	$(MAKE) -C diagrams diagrams.pdf
+
+inter/%.me: src/%.me
+	tbl $< | pic > $@
+
+# .me files that include diagrams depend on the .eps
+inter/04-arch.01-physical.me: inter/04-arch.01-physical.eps
+inter/04-arch.03-logical.me: inter/04-arch.03-logical.eps
+
+IMG_SOURCES := $(wildcard src/img/*.svg)
+ICONS := $(patsubst src/img/%.svg,inter/img/%.eps,$(IMG_SOURCES))
+
+inter/%.eps: src/%.asy src/lib.asy $(ICONS)
+	mkdir -p $(@D)
+	asy -dir src -o $(basename $@) $<
+
+inter/img/%.eps: src/img/%.svg
+	mkdir -p $(@D)
+	inkscape $< --export-filename=$@
+
+clean:
+	rm -f inter/*.me inter/*.eps
+	rm -rf inter/img
+	rm -f inter/report-body.pdf report.pdf
+	$(MAKE) -C diagrams clean
+
+.PHONY: clean

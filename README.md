@@ -1,4 +1,4 @@
-# diagram
+# Victor
 
 A C++ programme that renders SVG from a high-level language based on Fennel.
 Supports font-to-path conversion and text dimension calculation for non-embedded fonts.

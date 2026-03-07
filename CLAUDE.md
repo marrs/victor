@@ -5,7 +5,7 @@
 All new features follow a 3-stage workflow:
 
 1. **Spec descriptions** — Write test descriptions with empty bodies. Wait for user approval before proceeding.
-2. **Spec bodies** — Write the test implementations and stubs for any new functions under test (so tests fail rather than crash). Wait for user approval before proceeding.
+2. **Spec bodies** — Write stubs for any new functions under test first (so the code compiles), then write the test implementations. Stubs should be minimal — just enough to compile — so that the tests fail rather than crash. Wait for user approval before proceeding.
 3. **Implementation** — Write code until all tests pass.
 
 Do not edit tests after they have been approved without explicitly asking the user for permission first.
@@ -38,6 +38,7 @@ The codebase is written in a C-style subset of C++:
 - Inheritance is permitted for shared fields and compile-time type relationships (no vtables)
 - Function signature overloading is used heavily
 - No templates
+- No closures (lambdas, `auto` function types, or structs that capture state)
 - No features that negatively impact compilation time
 
 ## Fennel Notes

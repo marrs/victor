@@ -317,44 +317,46 @@
       (testing "wraps path commands in newpath and stroke"
         (let [[issue result] (path-eps [[:move-abs {:x 10 :y 20}] [:close {}]])]
           (is (nil? issue))
-          (is (= :newpath (?. result 3 1)))
-          (is (= :stroke (. (. result (length result)) 1)))))
+          (is (= :newpath (?. result 4 1)))
+          (is (= :stroke (. (. result (- (length result) 1)) 1)))))
 
       (testing "[:move-abs] emits moveto with Y-flip"
         (let [[issue result] (path-eps [[:move-abs {:x 10 :y 20}]])]
           (is (nil? issue))
           (is (deep= [:eps {:width 200 :height 100}
+                      [:gsave]
                       [:newpath]
                       [:moveto {:x 10 :y 80}]
-                      [:stroke]]
+                      [:stroke]
+                      [:grestore]]
                      result))))
 
       (testing "[:move-rel] emits rmoveto with negated dy"
         (let [[issue result] (path-eps [[:move-abs {:x 0 :y 0}] [:move-rel {:dx 5 :dy 10}]])]
           (is (nil? issue))
-          (is (deep= [:rmoveto {:dx 5 :dy -10}] (. result 5)))))
+          (is (deep= [:rmoveto {:dx 5 :dy -10}] (. result 6)))))
 
       (testing "[:line-abs] emits lineto with Y-flip"
         (let [[issue result] (path-eps [[:move-abs {:x 0 :y 0}] [:line-abs {:x 50 :y 30}]])]
           (is (nil? issue))
-          (is (deep= [:lineto {:x 50 :y 70}] (. result 5)))))
+          (is (deep= [:lineto {:x 50 :y 70}] (. result 6)))))
 
       (testing "[:line-rel] emits rlineto with negated dy"
         (let [[issue result] (path-eps [[:move-abs {:x 0 :y 0}] [:line-rel {:dx 10 :dy 5}]])]
           (is (nil? issue))
-          (is (deep= [:rlineto {:dx 10 :dy -5}] (. result 5)))))
+          (is (deep= [:rlineto {:dx 10 :dy -5}] (. result 6)))))
 
       (testing "[:curve-abs] emits curveto with Y-flip on all y coordinates"
         (let [[issue result] (path-eps [[:move-abs {:x 0 :y 0}]
                                         [:curve-abs {:x1 10 :y1 20 :x2 30 :y2 40 :x 50 :y 0}]])]
           (is (nil? issue))
-          (is (deep= [:curveto {:x1 10 :y1 80 :x2 30 :y2 60 :x3 50 :y3 100}] (. result 5)))))
+          (is (deep= [:curveto {:x1 10 :y1 80 :x2 30 :y2 60 :x3 50 :y3 100}] (. result 6)))))
 
       (testing "[:curve-rel] emits rcurveto with negated dy values"
         (let [[issue result] (path-eps [[:move-abs {:x 0 :y 0}]
                                         [:curve-rel {:dx1 10 :dy1 20 :dx2 30 :dy2 40 :dx 50 :dy 0}]])]
           (is (nil? issue))
-          (is (deep= [:rcurveto {:dx1 10 :dy1 -20 :dx2 30 :dy2 -40 :dx3 50 :dy3 0}] (. result 5)))))
+          (is (deep= [:rcurveto {:dx1 10 :dy1 -20 :dx2 30 :dy2 -40 :dx3 50 :dy3 0}] (. result 6)))))
 
       (testing "[:quad-abs] converts quadratic bezier to cubic curveto"
         ;; P0=(0,0) P1=(30,30) P2=(60,0) → C1=(20,20) C2=(40,20) in SVG space
@@ -362,7 +364,7 @@
         (let [[issue result] (path-eps [[:move-abs {:x 0 :y 0}]
                                         [:quad-abs {:x1 30 :y1 30 :x 60 :y 0}]])]
           (is (nil? issue))
-          (is (deep= [:curveto {:x1 20 :y1 80 :x2 40 :y2 80 :x3 60 :y3 100}] (. result 5)))))
+          (is (deep= [:curveto {:x1 20 :y1 80 :x2 40 :y2 80 :x3 60 :y3 100}] (. result 6)))))
 
       (testing "[:quad-rel] converts relative quadratic bezier to rcurveto"
         ;; from P0=(0,0): dx1=30 dy1=30 dx=60 dy=0
@@ -371,7 +373,7 @@
         (let [[issue result] (path-eps [[:move-abs {:x 0 :y 0}]
                                         [:quad-rel {:dx1 30 :dy1 30 :dx 60 :dy 0}]])]
           (is (nil? issue))
-          (is (deep= [:rcurveto {:dx1 20 :dy1 -20 :dx2 40 :dy2 -20 :dx3 60 :dy3 0}] (. result 5)))))
+          (is (deep= [:rcurveto {:dx1 20 :dy1 -20 :dx2 40 :dy2 -20 :dx3 60 :dy3 0}] (. result 6)))))
 
       (testing "[:arc-abs] decomposes arc into curveto sequence"
         (let [[issue result] (path-eps [[:move-abs {:x 0 :y 50}]
@@ -405,7 +407,34 @@
                                        {:fill "black" :stroke "none"})]
           (is (nil? issue))
           (is (has-op? result :fill))
-          (is (not (has-op? result :stroke))))))
+          (is (not (has-op? result :stroke)))))
+
+      (testing "stroke color is isolated to :path operation"
+        (let [[issue result] (path-eps [[:move-abs {:x 0 :y 0}] [:close {}]]
+                                       {:stroke "red"})]
+          (is (nil? issue))
+          (is (= :gsave (?. result 3 1)))
+          (is (= :grestore (. (. result (length result)) 1)))))
+
+      (testing "stroke-width is isolated to :path operation"
+        (let [[issue result] (path-eps [[:move-abs {:x 0 :y 0}] [:close {}]]
+                                       {:stroke-width 5})]
+          (is (nil? issue))
+          (is (= :gsave (?. result 3 1)))
+          (is (= :grestore (. (. result (length result)) 1)))))
+
+      (testing "fill color is isolated to :path operation"
+        (let [[issue result] (path-eps [[:move-abs {:x 0 :y 0}] [:close {}]]
+                                       {:fill "black"})]
+          (is (nil? issue))
+          (is (= :gsave (?. result 3 1)))
+          (is (= :grestore (. (. result (length result)) 1)))))
+
+      (testing "plain path is always isolated"
+        (let [[issue result] (path-eps [[:move-abs {:x 0 :y 0}] [:close {}]])]
+          (is (nil? issue))
+          (is (= :gsave (?. result 3 1)))
+          (is (= :grestore (. (. result (length result)) 1))))))
 
     (testing "measurements"
       (let [[issue result] (bic.dsl {:target :eps}

@@ -309,10 +309,11 @@
                            :stroke attrs.stroke
                            :stroke-width attrs.stroke-width}]]])
       :eps (fn [attrs ctx]
-             (let [height   ctx.height
-                   nodes    []
+             (let [height    ctx.height
+                   nodes     []
                    do-fill   (and attrs.fill (not= attrs.fill :none))
                    do-stroke (not= attrs.stroke :none)]
+               (table.insert nodes [:gsave])
                (when do-fill
                  (table.insert nodes [:newpath])
                  (emit-eps-cmds nodes height attrs.d)
@@ -327,6 +328,7 @@
                  (when attrs.stroke-width
                    (table.insert nodes [:setlinewidth {:w attrs.stroke-width}]))
                  (table.insert nodes [:stroke]))
+               (table.insert nodes [:grestore])
                [nil nodes]))})
 
    :circle

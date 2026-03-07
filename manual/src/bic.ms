@@ -22,7 +22,7 @@ The following primitive shapes are supported by Bic
              [:text {:x 288 :y 110 :str ":path (todo)"}]
              ])
 .)codex
-
+Bic also supports paths
 .(codex
 (local bic (require :src.fennel.bic))
 (bic.render [:bic {:width 300 :height 100}
@@ -33,6 +33,25 @@ The following primitive shapes are supported by Bic
                     [:close {}]]
              [:path [:move-abs {:x 110 :y 80}]
                     [:curve-abs {:x1 120 :y1 10 :x2 180 :y2 10 :x 190 :y 80}]]
+             [:path [:move-abs {:x 210 :y 50}]
+                    [:arc-abs {:rx 40 :ry 40 :rot 0 :large-arc 0 :sweep 0
+                               :x 290 :y 50}]
+                    [:quad-abs {:x1 250 :y1 90 :x 210 :y 50}]]
+             ])
+.)codex
+Paths can be given different stroke colours and widths
+.(codex
+(local bic (require :src.fennel.bic))
+(bic.render [:bic {:width 300 :height 100}
+             [:path {:stroke :blue}
+               [:move-abs {:x 50 :y 10}]
+               [:line-abs {:x 90 :y 55}]
+               [:line-abs {:x 50 :y 90}]
+               [:line-abs {:x 10 :y 55}]
+               [:close {}]]
+             [:path {:stroke :red :stroke-width 10}
+               [:move-abs {:x 110 :y 80}]
+               [:curve-abs {:x1 120 :y1 10 :x2 180 :y2 10 :x 190 :y 80}]]
              [:path [:move-abs {:x 210 :y 50}]
                     [:arc-abs {:rx 40 :ry 40 :rot 0 :large-arc 0 :sweep 0
                                :x 290 :y 50}]

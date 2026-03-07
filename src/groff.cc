@@ -27,8 +27,7 @@ static void rewrite_fennel_err(char *out, size_t outsz,
 {
     static const char pfx[] = "[string \"";
     if (strncmp(msg, pfx, sizeof(pfx) - 1) != 0) {
-        strncpy(out, msg, outsz - 1);
-        out[outsz - 1] = '\0';
+        snprintf(out, outsz, "%s:%d: %s", filepath, vic_start_line, msg);
         return;
     }
     // Scan for "]:N: pattern — the closing delimiter of the chunk name
@@ -97,8 +96,11 @@ static int process_groff(lua_State *lua, const char *filepath, const char *dir =
             } else if (strncmp(line, ".ENDVIC", 7) == 0 &&
                     (line[7] == '\n' || line[7] == '\r' ||
                      line[7] == '\0' || line[7] == ' ')) {
+                char orphan_msg[4096];
+                snprintf(orphan_msg, sizeof(orphan_msg), "%s:%d: orphan .ENDVIC",
+                         filepath, line_num);
                 String_Result res = string_result(LOG_WARNING, "groff/orphan-endvic",
-                                                  "orphan .ENDVIC", nullptr);
+                                                  orphan_msg, nullptr);
                 print_err("groff", res);
                 fwrite(line, 1, len, stdout);
             } else {
@@ -145,7 +147,8 @@ static int process_groff(lua_State *lua, const char *filepath, const char *dir =
                     } else {
                         char msg[64];
                         snprintf(msg, sizeof(msg),
-                                 "VIC block %d produced no string", vic_counter);
+                                 "%s:%d: VIC block %d produced no string",
+                                 filepath, vic_start_line, vic_counter);
                         String_Result res = string_result(LOG_ERROR,
                             "groff/no-string", msg, nullptr);
                         print_err("groff", res);
@@ -168,8 +171,11 @@ static int process_groff(lua_State *lua, const char *filepath, const char *dir =
             } else {
                 for (size_t i = 0; i < len; i++) {
                     if (buf_push(&vic_code, line[i]) < 0) {
+                        char oom_msg[4096];
+                        snprintf(oom_msg, sizeof(oom_msg), "%s:%d: out of memory",
+                                 filepath, line_num);
                         String_Result res = string_result(LOG_ERROR,
-                            "groff/out-of-memory", "out of memory", nullptr);
+                            "groff/out-of-memory", oom_msg, nullptr);
                         print_err("groff", res);
                         fclose(f);
                         buf_free(&vic_code);
@@ -181,8 +187,11 @@ static int process_groff(lua_State *lua, const char *filepath, const char *dir =
     }
 
     if (in_vic) {
+        char unterm_msg[4096];
+        snprintf(unterm_msg, sizeof(unterm_msg), "%s:%d: unterminated .VIC block",
+                 filepath, vic_start_line);
         String_Result res = string_result(LOG_WARNING,
-            "groff/unterminated-vic", "unterminated .VIC block", nullptr);
+            "groff/unterminated-vic", unterm_msg, nullptr);
         print_err("groff", res);
     }
 

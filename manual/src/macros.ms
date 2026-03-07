@@ -1,1 +1,4 @@
-.\\" Custom groff macros for the Victor Reference Manual
+.ig
+vim: ft=groff:
+Custom groff macros for the Victor Reference Manual
+..

@@ -6,8 +6,11 @@ CHAPTERS = vic bic eps svg
 
 PROCESSED = $(CHAPTERS:%=../target/man-%.ms)
 
-../target/man-%.ms: src/%.ms $(VICTOR) | ../target
-	cd .. && $(abspath $(VICTOR)) groff -i target manual/src/$*.ms > target/man-$*.ms
+../target/man-%-src.ms: src/%.ms | ../target
+	awk -f codex-expand $< > $@
+
+../target/man-%.ms: ../target/man-%-src.ms $(VICTOR)
+	cd .. && $(abspath $(VICTOR)) groff -i target target/man-$*-src.ms > target/man-$*.ms
 
 ../target/manual.ps: src/manual.ms src/macros.ms $(PROCESSED)
 	cd .. && $(GROFF) manual/src/manual.ms > target/manual.ps

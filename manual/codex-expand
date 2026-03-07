@@ -1,0 +1,23 @@
+/^\.\(codex$/ {
+    capturing = 1
+    n = 0
+    next
+}
+/^\.\)codex$/ {
+    print ".DS L"
+    print ".ft CW"
+    for (i = 1; i <= n; i++) print lines[i]
+    print ".ft"
+    print ".DE"
+    print ".VIC"
+    for (i = 1; i <= n; i++) print lines[i]
+    print ".ENDVIC"
+    capturing = 0
+    n = 0
+    next
+}
+capturing {
+    lines[++n] = $0
+    next
+}
+{ print }

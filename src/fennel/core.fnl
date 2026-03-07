@@ -1,6 +1,7 @@
 (fn nil? [v] (= nil v))
 (fn number? [v] (= :number (type v)))
 (fn string? [v] (= :string (type v)))
+(fn table? [v] (= :table (type v)))
 
 (fn deep= [a b]
   (if (not= (type a) (type b))
@@ -17,4 +18,4 @@
             (set eq false)))
         eq))))
 
-{: nil? : number? : string? : deep=}
+{: nil? : number? : string? : table? : deep=}

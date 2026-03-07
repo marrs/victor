@@ -1,4 +1,4 @@
-(local {: number? : string?} (require :src.fennel.core))
+(local {: number? : string? : table?} (require :src.fennel.core))
 
 (local measurement [:or number? [:tuple number? [:enum :in :pt :pc]]])
 
@@ -36,4 +36,11 @@
    [:size measurement]
    [:str  string?]])
 
-{: measurement : bic : rect : circle : text}
+(local path
+  [:map
+   [:d             table?]
+   [:fill         {:optional true} string?]
+   [:stroke       {:optional true} string?]
+   [:stroke-width {:optional true} measurement]])
+
+{: measurement : bic : rect : circle : text : path}

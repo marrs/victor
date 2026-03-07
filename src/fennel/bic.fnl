@@ -139,6 +139,196 @@
              (flush-run)
              [nil nodes]))}
 
+   :path
+   (let [path-d
+         (fn [cmds]
+           (let [parts []]
+             (each [_ cmd (ipairs cmds)]
+               (let [tag (. cmd 1) aa (. cmd 2)]
+                 (match tag
+                   :move-abs  (table.insert parts (.. "M " aa.x " " aa.y))
+                   :move-rel  (table.insert parts (.. "m " aa.dx " " aa.dy))
+                   :line-abs  (table.insert parts (.. "L " aa.x " " aa.y))
+                   :line-rel  (table.insert parts (.. "l " aa.dx " " aa.dy))
+                   :curve-abs (table.insert parts (.. "C " aa.x1 " " aa.y1 " " aa.x2 " " aa.y2 " " aa.x " " aa.y))
+                   :curve-rel (table.insert parts (.. "c " aa.dx1 " " aa.dy1 " " aa.dx2 " " aa.dy2 " " aa.dx " " aa.dy))
+                   :quad-abs  (table.insert parts (.. "Q " aa.x1 " " aa.y1 " " aa.x " " aa.y))
+                   :quad-rel  (table.insert parts (.. "q " aa.dx1 " " aa.dy1 " " aa.dx " " aa.dy))
+                   :arc-abs   (table.insert parts (.. "A " aa.rx " " aa.ry " " aa.rot " " aa.large-arc " " aa.sweep " " aa.x " " aa.y))
+                   :arc-rel   (table.insert parts (.. "a " aa.rx " " aa.ry " " aa.rot " " aa.large-arc " " aa.sweep " " aa.dx " " aa.dy))
+                   :close     (table.insert parts "Z"))))
+             (table.concat parts " ")))
+
+         arc->beziers
+         (fn [x1 y1 rx ry rot large-arc sweep x2 y2]
+           ;; Convert SVG endpoint arc to cubic Bézier segments.
+           ;; Returns list of {:x1 :y1 :x2 :y2 :x3 :y3} in SVG space.
+           (let [pi       math.pi
+                 phi      (* rot (/ pi 180))
+                 cosp     (math.cos phi)
+                 sinp     (math.sin phi)
+                 ;; Step 1: midpoint in rotated frame
+                 mx       (/ (- x1 x2) 2)
+                 my       (/ (- y1 y2) 2)
+                 x1p      (+ (* cosp mx) (* sinp my))
+                 y1p      (+ (* (- sinp) mx) (* cosp my))
+                 ;; Ensure radii large enough
+                 rx       (math.abs rx)
+                 ry       (math.abs ry)
+                 lam      (+ (^ (/ x1p rx) 2) (^ (/ y1p ry) 2))
+                 rx       (if (> lam 1) (* rx (math.sqrt lam)) rx)
+                 ry       (if (> lam 1) (* ry (math.sqrt lam)) ry)
+                 ;; Step 2: center in rotated frame
+                 num      (- (* rx rx ry ry) (* rx rx y1p y1p) (* ry ry x1p x1p))
+                 den      (+ (* rx rx y1p y1p) (* ry ry x1p x1p))
+                 sq       (if (> den 0) (math.sqrt (math.max 0 (/ num den))) 0)
+                 sq       (if (= large-arc sweep) (- sq) sq)
+                 cxp      (* sq (/ (* rx y1p) ry))
+                 cyp      (* sq (- (/ (* ry x1p) rx)))
+                 ;; Step 3: center in original frame
+                 cx       (+ (* cosp cxp) (* (- sinp) cyp) (/ (+ x1 x2) 2))
+                 cy       (+ (* sinp cxp) (* cosp cyp) (/ (+ y1 y2) 2))
+                 vec-angle (fn [ux uy vx vy]
+                              (let [dot (+ (* ux vx) (* uy vy))
+                                    len (* (math.sqrt (+ (* ux ux) (* uy uy)))
+                                           (math.sqrt (+ (* vx vx) (* vy vy))))
+                                    ang (math.acos (math.max -1 (math.min 1 (/ dot len))))]
+                                (if (< (- (* ux vy) (* uy vx)) 0) (- ang) ang)))
+                 theta1   (vec-angle 1 0 (/ (- x1p cxp) rx) (/ (- y1p cyp) ry))
+                 dtheta   (vec-angle (/ (- x1p cxp) rx) (/ (- y1p cyp) ry)
+                                     (/ (- (- x1p) cxp) rx) (/ (- (- y1p) cyp) ry))
+                 dtheta   (if (and (= sweep 0) (> dtheta 0)) (- dtheta (* 2 pi))
+                              (and (= sweep 1) (< dtheta 0)) (+ dtheta (* 2 pi))
+                              dtheta)
+                 n-segs   (math.max 1 (math.ceil (/ (math.abs dtheta) (/ pi 2))))
+                 dt       (/ dtheta n-segs)
+                 alpha    (* (/ 4 3) (math.tan (/ dt 4)))
+                 rot+tr   (fn [px py]
+                            [(+ (* cosp px) (* (- sinp) py) cx)
+                             (+ (* sinp px) (* cosp py) cy)])
+                 segs     []]
+             (for [ii 0 (- n-segs 1)]
+               (let [t1       (+ theta1 (* ii dt))
+                     t2       (+ theta1 (* (+ ii 1) dt))
+                     p1x      (* rx (math.cos t1))
+                     p1y      (* ry (math.sin t1))
+                     p2x      (* rx (math.cos t2))
+                     p2y      (* ry (math.sin t2))
+                     d1x      (- (* rx (math.sin t1)))
+                     d1y      (* ry (math.cos t1))
+                     d2x      (- (* rx (math.sin t2)))
+                     d2y      (* ry (math.cos t2))
+                     c1x      (+ p1x (* alpha d1x))
+                     c1y      (+ p1y (* alpha d1y))
+                     c2x      (- p2x (* alpha d2x))
+                     c2y      (- p2y (* alpha d2y))
+                     [c1rx c1ry] (rot+tr c1x c1y)
+                     [c2rx c2ry] (rot+tr c2x c2y)
+                     [p2rx p2ry] (rot+tr p2x p2y)]
+                 (table.insert segs {:x1 c1rx :y1 c1ry
+                                     :x2 c2rx :y2 c2ry
+                                     :x3 p2rx :y3 p2ry})))
+             segs))
+
+         emit-eps-cmds
+         (fn [nodes height cmds]
+           (var cur-x 0)
+           (var cur-y 0)
+           (each [_ cmd (ipairs cmds)]
+             (let [tag (. cmd 1) aa (. cmd 2)]
+               (match tag
+                 :move-abs (do
+                             (table.insert nodes [:moveto {:x aa.x :y (eps-y height aa.y)}])
+                             (set cur-x aa.x)
+                             (set cur-y aa.y))
+                 :move-rel (do
+                             (table.insert nodes [:rmoveto {:dx aa.dx :dy (- aa.dy)}])
+                             (set cur-x (+ cur-x aa.dx))
+                             (set cur-y (+ cur-y aa.dy)))
+                 :line-abs (do
+                             (table.insert nodes [:lineto {:x aa.x :y (eps-y height aa.y)}])
+                             (set cur-x aa.x)
+                             (set cur-y aa.y))
+                 :line-rel (do
+                             (table.insert nodes [:rlineto {:dx aa.dx :dy (- aa.dy)}])
+                             (set cur-x (+ cur-x aa.dx))
+                             (set cur-y (+ cur-y aa.dy)))
+                 :curve-abs (do
+                              (table.insert nodes [:curveto {:x1 aa.x1 :y1 (eps-y height aa.y1)
+                                                             :x2 aa.x2 :y2 (eps-y height aa.y2)
+                                                             :x3 aa.x  :y3 (eps-y height aa.y)}])
+                              (set cur-x aa.x)
+                              (set cur-y aa.y))
+                 :curve-rel (do
+                              (table.insert nodes [:rcurveto {:dx1 aa.dx1 :dy1 (- aa.dy1)
+                                                              :dx2 aa.dx2 :dy2 (- aa.dy2)
+                                                              :dx3 aa.dx  :dy3 (- aa.dy)}])
+                              (set cur-x (+ cur-x aa.dx))
+                              (set cur-y (+ cur-y aa.dy)))
+                 :quad-abs (let [;; P0=cur, P1=(x1,y1), P2=(x,y)
+                                 ;; C1 = P0 + 2/3*(P1-P0), C2 = P2 + 2/3*(P1-P2)
+                                 c1x (+ cur-x (* (/ 2 3) (- aa.x1 cur-x)))
+                                 c1y (+ cur-y (* (/ 2 3) (- aa.y1 cur-y)))
+                                 c2x (+ aa.x  (* (/ 2 3) (- aa.x1 aa.x)))
+                                 c2y (+ aa.y  (* (/ 2 3) (- aa.y1 aa.y)))]
+                             (table.insert nodes [:curveto {:x1 c1x :y1 (eps-y height c1y)
+                                                            :x2 c2x :y2 (eps-y height c2y)
+                                                            :x3 aa.x :y3 (eps-y height aa.y)}])
+                             (set cur-x aa.x)
+                             (set cur-y aa.y))
+                 :quad-rel (let [;; relative: dC1 = 2/3*(dx1,dy1)
+                                 ;;           dC2 = ((dx+2*dx1)/3, (dy+2*dy1)/3)
+                                 dc1x (* (/ 2 3) aa.dx1)
+                                 dc1y (* (/ 2 3) aa.dy1)
+                                 dc2x (/ (+ aa.dx (* 2 aa.dx1)) 3)
+                                 dc2y (/ (+ aa.dy (* 2 aa.dy1)) 3)]
+                             (table.insert nodes [:rcurveto {:dx1 dc1x :dy1 (- dc1y)
+                                                             :dx2 dc2x :dy2 (- dc2y)
+                                                             :dx3 aa.dx :dy3 (- aa.dy)}])
+                             (set cur-x (+ cur-x aa.dx))
+                             (set cur-y (+ cur-y aa.dy)))
+                 :arc-abs (let [segs (arc->beziers cur-x cur-y aa.rx aa.ry aa.rot aa.large-arc aa.sweep aa.x aa.y)]
+                            (each [_ seg (ipairs segs)]
+                              (table.insert nodes [:curveto {:x1 seg.x1 :y1 (eps-y height seg.y1)
+                                                             :x2 seg.x2 :y2 (eps-y height seg.y2)
+                                                             :x3 seg.x3 :y3 (eps-y height seg.y3)}]))
+                            (set cur-x aa.x)
+                            (set cur-y aa.y))
+                 :arc-rel (let [segs (arc->beziers cur-x cur-y aa.rx aa.ry aa.rot aa.large-arc aa.sweep
+                                                   (+ cur-x aa.dx) (+ cur-y aa.dy))]
+                            (each [_ seg (ipairs segs)]
+                              (table.insert nodes [:curveto {:x1 seg.x1 :y1 (eps-y height seg.y1)
+                                                             :x2 seg.x2 :y2 (eps-y height seg.y2)
+                                                             :x3 seg.x3 :y3 (eps-y height seg.y3)}]))
+                            (set cur-x (+ cur-x aa.dx))
+                            (set cur-y (+ cur-y aa.dy)))
+                 :close (table.insert nodes [:closepath])))))]
+     {:svg (fn [attrs _ctx]
+             [nil [[:path {:d      (path-d attrs.d)
+                           :fill   attrs.fill
+                           :stroke attrs.stroke
+                           :stroke-width attrs.stroke-width}]]])
+      :eps (fn [attrs ctx]
+             (let [height   ctx.height
+                   nodes    []
+                   do-fill   (and attrs.fill (not= attrs.fill :none))
+                   do-stroke (not= attrs.stroke :none)]
+               (when do-fill
+                 (table.insert nodes [:newpath])
+                 (emit-eps-cmds nodes height attrs.d)
+                 (when (. named-colors attrs.fill)
+                   (table.insert nodes [:setrgbcolor (. named-colors attrs.fill)]))
+                 (table.insert nodes [:fill]))
+               (when do-stroke
+                 (table.insert nodes [:newpath])
+                 (emit-eps-cmds nodes height attrs.d)
+                 (when (and attrs.stroke (. named-colors attrs.stroke))
+                   (table.insert nodes [:setrgbcolor (. named-colors attrs.stroke)]))
+                 (when attrs.stroke-width
+                   (table.insert nodes [:setlinewidth {:w attrs.stroke-width}]))
+                 (table.insert nodes [:stroke]))
+               [nil nodes]))})
+
    :circle
    {:svg (fn [attrs _ctx]
            [nil [[:circle attrs]]])
@@ -172,7 +362,9 @@
 (local schema
   {:rect   {:schema grammar.rect   :resolver resolvers.rect}
    :circle {:schema grammar.circle :resolver resolvers.circle}
-   :text   {:schema grammar.text   :resolver resolvers.text}})
+   :text   {:schema grammar.text   :resolver resolvers.text}
+   :path   {:schema grammar.path
+            :resolver resolvers.path}})
 
 ;;; Attribute resolver
 

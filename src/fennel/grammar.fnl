@@ -40,6 +40,7 @@
   [:map
    [:fill         {:optional true} string?]
    [:stroke       {:optional true} string?]
-   [:stroke-width {:optional true} measurement]])
+   [:stroke-width {:optional true} measurement]
+   [:stroke-cap   {:optional true} string?]])
 
 {: measurement : bic : rect : circle : text : path}

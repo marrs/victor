@@ -304,10 +304,15 @@
                             (set cur-y (+ cur-y aa.dy)))
                  :close (table.insert nodes [:closepath])))))]
      {:svg (fn [attrs _ctx]
-             [nil [[:path {:d      (path-d attrs.d)
-                           :fill   attrs.fill
-                           :stroke attrs.stroke
-                           :stroke-width attrs.stroke-width}]]])
+             [nil [[:path {:d            (path-d attrs.d)
+                           :fill         attrs.fill
+                           :stroke       attrs.stroke
+                           :stroke-width attrs.stroke-width
+                           :stroke-linecap (match attrs.stroke-cap
+                                             :butt   :butt
+                                             :round  :round
+                                             :square :square
+                                             _       nil)}]]])
       :eps (fn [attrs ctx]
              (let [height    ctx.height
                    nodes     []
@@ -327,6 +332,10 @@
                    (table.insert nodes [:setrgbcolor (. named-colors attrs.stroke)]))
                  (when attrs.stroke-width
                    (table.insert nodes [:setlinewidth {:w attrs.stroke-width}]))
+                 (match attrs.stroke-cap
+                   :butt   (table.insert nodes [:setlinecap {:cap 0}])
+                   :round  (table.insert nodes [:setlinecap {:cap 1}])
+                   :square (table.insert nodes [:setlinecap {:cap 2}]))
                  (table.insert nodes [:stroke]))
                (table.insert nodes [:grestore])
                [nil nodes]))})

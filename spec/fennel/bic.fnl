@@ -194,7 +194,37 @@
       (testing "fill attribute is passed through"
         (let [[issue result] (path-svg [[:move-abs {:x 0 :y 0}]] {:fill "red"})]
           (is (nil? issue))
-          (is (= "red" (?. result 3 2 :fill))))))
+          (is (= "red" (?. result 3 2 :fill)))))
+
+      (testing ":stroke-cap :butt sets stroke-linecap to butt"
+        (let [[issue result] (path-svg [[:move-abs {:x 0 :y 0}]] {:stroke-cap :butt})]
+          (is (nil? issue))
+          (is (= :butt (?. result 3 2 :stroke-linecap)))))
+
+      (testing ":stroke-cap :round sets stroke-linecap to round"
+        (let [[issue result] (path-svg [[:move-abs {:x 0 :y 0}]] {:stroke-cap :round})]
+          (is (nil? issue))
+          (is (= :round (?. result 3 2 :stroke-linecap)))))
+
+      (testing ":stroke-cap :square sets stroke-linecap to square"
+        (let [[issue result] (path-svg [[:move-abs {:x 0 :y 0}]] {:stroke-cap :square})]
+          (is (nil? issue))
+          (is (= :square (?. result 3 2 :stroke-linecap)))))
+
+      (testing ":stroke-cap :none omits stroke-linecap"
+        (let [[issue result] (path-svg [[:move-abs {:x 0 :y 0}]] {:stroke-cap :none})]
+          (is (nil? issue))
+          (is (= nil (?. result 3 2 :stroke-linecap)))))
+
+      (testing "unset :stroke-cap omits stroke-linecap"
+        (let [[issue result] (path-svg [[:move-abs {:x 0 :y 0}]])]
+          (is (nil? issue))
+          (is (= nil (?. result 3 2 :stroke-linecap)))))
+
+      (testing "unsupported :stroke-cap value omits stroke-linecap"
+        (let [[issue result] (path-svg [[:move-abs {:x 0 :y 0}]] {:stroke-cap :miter})]
+          (is (nil? issue))
+          (is (= nil (?. result 3 2 :stroke-linecap))))))
 
     (testing "measurement dims [:in 1] [:pt 72] → SVG doc with {:width \"1in\" :height \"72pt\"}"
       (let [[issue result] (bic.dsl {:target :svg}
@@ -313,6 +343,10 @@
       (fn has-op? [result tag]
         (accumulate [found false _ node (ipairs result) &until found]
           (= tag (. node 1))))
+
+      (fn find-op [result tag]
+        (accumulate [found nil _ node (ipairs result) &until found]
+          (when (= tag (. node 1)) node)))
 
       (testing "wraps path commands in newpath and stroke"
         (let [[issue result] (path-eps [[:move-abs {:x 10 :y 20}] [:close {}]])]
@@ -434,7 +468,37 @@
         (let [[issue result] (path-eps [[:move-abs {:x 0 :y 0}] [:close {}]])]
           (is (nil? issue))
           (is (= :gsave (?. result 3 1)))
-          (is (= :grestore (. (. result (length result)) 1))))))
+          (is (= :grestore (. (. result (length result)) 1)))))
+
+      (testing ":stroke-cap :butt emits 0 setlinecap"
+        (let [[issue result] (path-eps [[:move-abs {:x 0 :y 0}]] {:stroke-cap :butt})]
+          (is (nil? issue))
+          (is (deep= [:setlinecap {:cap 0}] (find-op result :setlinecap)))))
+
+      (testing ":stroke-cap :round emits 1 setlinecap"
+        (let [[issue result] (path-eps [[:move-abs {:x 0 :y 0}]] {:stroke-cap :round})]
+          (is (nil? issue))
+          (is (deep= [:setlinecap {:cap 1}] (find-op result :setlinecap)))))
+
+      (testing ":stroke-cap :square emits 2 setlinecap"
+        (let [[issue result] (path-eps [[:move-abs {:x 0 :y 0}]] {:stroke-cap :square})]
+          (is (nil? issue))
+          (is (deep= [:setlinecap {:cap 2}] (find-op result :setlinecap)))))
+
+      (testing ":stroke-cap :none omits setlinecap"
+        (let [[issue result] (path-eps [[:move-abs {:x 0 :y 0}]] {:stroke-cap :none})]
+          (is (nil? issue))
+          (is (not (has-op? result :setlinecap)))))
+
+      (testing "unset :stroke-cap omits setlinecap"
+        (let [[issue result] (path-eps [[:move-abs {:x 0 :y 0}]])]
+          (is (nil? issue))
+          (is (not (has-op? result :setlinecap)))))
+
+      (testing "unsupported :stroke-cap value omits setlinecap"
+        (let [[issue result] (path-eps [[:move-abs {:x 0 :y 0}]] {:stroke-cap :miter})]
+          (is (nil? issue))
+          (is (not (has-op? result :setlinecap))))))
 
     (testing "measurements"
       (let [[issue result] (bic.dsl {:target :eps}

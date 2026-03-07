@@ -108,9 +108,9 @@
 
     (testing "path"
       (fn path-svg [cmds ?attrs]
-        (let [attrs (or ?attrs {})]
-          (tset attrs :d cmds)
-          (bic.dsl {:target :svg} [:bic {:width 200 :height 100} [:path attrs]])))
+        (let [node (if ?attrs [:path ?attrs] [:path])]
+          (each [_ cmd (ipairs cmds)] (table.insert node cmd))
+          (bic.dsl {:target :svg} [:bic {:width 200 :height 100} node])))
 
       (testing "produces a :path node with a d attribute"
         (let [[issue result] (path-svg [[:move-abs {:x 10 :y 20}] [:close {}]])]
@@ -306,9 +306,9 @@
 
     (testing "path"
       (fn path-eps [cmds ?attrs]
-        (let [attrs (or ?attrs {})]
-          (tset attrs :d cmds)
-          (bic.dsl {:target :eps} [:bic {:width 200 :height 100} [:path attrs]])))
+        (let [node (if ?attrs [:path ?attrs] [:path])]
+          (each [_ cmd (ipairs cmds)] (table.insert node cmd))
+          (bic.dsl {:target :eps} [:bic {:width 200 :height 100} node])))
 
       (fn has-op? [result tag]
         (accumulate [found false _ node (ipairs result) &until found]

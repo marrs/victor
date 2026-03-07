@@ -38,7 +38,6 @@
 
 (local path
   [:map
-   [:d             table?]
    [:fill         {:optional true} string?]
    [:stroke       {:optional true} string?]
    [:stroke-width {:optional true} measurement]])

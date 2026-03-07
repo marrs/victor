@@ -403,8 +403,11 @@
           (for [idx 3 (length node) &until issue]
             (let [child      (. node idx)
                   prim-tag   (. child 1)
-                  prim-attrs (. child 2)
-                  prim-entry (. schema prim-tag)]
+                  prim-entry (. schema prim-tag)
+                  second     (. child 2)
+                  has-attrs  (and (= :table (type second)) (= nil (. second 1)))
+                  prim-attrs (if has-attrs second {})
+                  cmd-start  (if has-attrs 3 2)]
               (let [prim-attrs (if (= prim-tag :text)
                                  (let [merged {}]
                                    (each [ky vl (pairs prim-attrs)] (tset merged ky vl))
@@ -422,11 +425,16 @@
                   (let [val-issue (validator.validate prim-entry.schema prim-attrs)]
                     (when val-issue (set issue val-issue))))
                 (when (= nil issue)
-                  (let [resolved-prim (resolve-attrs prim-entry.schema prim-attrs target)
-                        [tr-issue nodes] ((. prim-entry.resolver target) resolved-prim ctx)]
-                    (when tr-issue (set issue tr-issue))
-                    (each [_ x (ipairs nodes)]
-                      (table.insert children x)))))))
+                  (let [resolved-prim (resolve-attrs prim-entry.schema prim-attrs target)]
+                    (when (= prim-tag :path)
+                      (let [cmds []]
+                        (for [ci cmd-start (length child)]
+                          (table.insert cmds (. child ci)))
+                        (tset resolved-prim :d cmds)))
+                    (let [[tr-issue nodes] ((. prim-entry.resolver target) resolved-prim ctx)]
+                      (when tr-issue (set issue tr-issue))
+                      (each [_ x (ipairs nodes)]
+                        (table.insert children x))))))))
           (if issue
             [issue nil]
             (let [doc (if (= target :svg)

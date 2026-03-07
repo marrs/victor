@@ -52,9 +52,50 @@ Paths can be given different stroke colours and widths
              [:path {:stroke :red :stroke-width 10}
                [:move-abs {:x 110 :y 80}]
                [:curve-abs {:x1 120 :y1 10 :x2 180 :y2 10 :x 190 :y 80}]]
-             [:path [:move-abs {:x 210 :y 50}]
-                    [:arc-abs {:rx 40 :ry 40 :rot 0 :large-arc 0 :sweep 0
-                               :x 290 :y 50}]
-                    [:quad-abs {:x1 250 :y1 90 :x 210 :y 50}]]
+             [:path {:stroke-width 5}
+               [:move-abs {:x 210 :y 50}]
+               [:arc-abs {:rx 40 :ry 40 :rot 0 :large-arc 0 :sweep 0
+                          :x 290 :y 50}]
+               [:quad-abs {:x1 250 :y1 90 :x 210 :y 50}]]
+             ])
+.)codex
+Path strokes can be capped
+.(codex
+(local bic (require :src.fennel.bic))
+(fn arc [x y cap]
+  [:path {:stroke :red :stroke-width 10 :stroke-cap cap}
+    [:move-abs {:x x :y y}]
+    [:curve-rel {:dx1 0 :dy1 100 :dx2 80 :dy2 100 :dx 80 :dy 0}]])
+
+(bic.render [:bic {:width 400 :height 100}
+             (arc 0 0 :none)
+             [:text {:x 10 :y 100 :str ":none (default)"}]
+             (arc 100 0 :butt)
+             [:text {:x 130 :y 100 :str ":butt"}]
+             (arc 200 0 :round)
+             [:text {:x 225 :y 100 :str ":round"}]
+             (arc 300 0 :square)
+             [:text {:x 325 :y 100 :str ":square"}]
+             ])
+.)codex
+.(codex
+(local bic (require :src.fennel.bic))
+(fn smile [x y cap]
+  [:path {:stroke-width 5 :stroke-cap cap}
+               [:move-abs {:x x :y y}]
+               [:arc-rel {:rx 40 :ry 40 :rot 0 :large-arc 0 :sweep 0
+                          :dx 80 :dy 0}]
+               [:quad-rel {:dx1 -40 :dy1 40 :dx -80 :dy 0}]
+               [:close {}]])
+
+(bic.render [:bic {:width 400 :height 100}
+             (smile 0 0 :none)
+             [:text {:x 40 :y 100 :str ":none (default)"}]
+             (smile 100 0 :butt)
+             [:text {:x 140 :y 100 :str ":butt"}]
+             (smile 200 0 :round)
+             [:text {:x 240 :y 100 :str ":round"}]
+             (smile 300 0 :square)
+             [:text {:x 340 :y 100 :str ":square"}]
              ])
 .)codex

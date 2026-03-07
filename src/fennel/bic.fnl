@@ -234,17 +234,26 @@
          (fn [nodes height cmds]
            (var cur-x 0)
            (var cur-y 0)
+           (var has-point false)
            (each [_ cmd (ipairs cmds)]
              (let [tag (. cmd 1) aa (. cmd 2)]
                (match tag
                  :move-abs (do
                              (table.insert nodes [:moveto {:x aa.x :y (eps-y height aa.y)}])
                              (set cur-x aa.x)
-                             (set cur-y aa.y))
-                 :move-rel (do
-                             (table.insert nodes [:rmoveto {:dx aa.dx :dy (- aa.dy)}])
-                             (set cur-x (+ cur-x aa.dx))
-                             (set cur-y (+ cur-y aa.dy)))
+                             (set cur-y aa.y)
+                             (set has-point true))
+                 :move-rel (if (not has-point)
+                             ;; SVG rule: first m in a path is treated as absolute
+                             (do
+                               (table.insert nodes [:moveto {:x aa.dx :y (eps-y height aa.dy)}])
+                               (set cur-x aa.dx)
+                               (set cur-y aa.dy)
+                               (set has-point true))
+                             (do
+                               (table.insert nodes [:rmoveto {:dx aa.dx :dy (- aa.dy)}])
+                               (set cur-x (+ cur-x aa.dx))
+                               (set cur-y (+ cur-y aa.dy))))
                  :line-abs (do
                              (table.insert nodes [:lineto {:x aa.x :y (eps-y height aa.y)}])
                              (set cur-x aa.x)

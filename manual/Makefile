@@ -1,15 +1,16 @@
 .DELETE_ON_ERROR:
 
-VICTOR   = ../target/victor
-GROFF    = groff -ms
-CHAPTERS = vic bic eps svg
+VICTOR      = ../target/victor
+GROFF       = groff -ms
+CHAPTERS    = vic bic eps svg
+FENNEL_SRCS = $(wildcard ../src/fennel/*.fnl)
 
 PROCESSED = $(CHAPTERS:%=../target/man-%.ms)
 
 ../target/man-%-src.ms: src/%.ms | ../target
 	awk -f codex-expand $< > $@
 
-../target/man-%.ms: ../target/man-%-src.ms $(VICTOR)
+../target/man-%.ms: ../target/man-%-src.ms $(VICTOR) $(FENNEL_SRCS)
 	cd .. && $(abspath $(VICTOR)) groff -i target target/man-$*-src.ms > target/man-$*.ms
 
 ../target/manual.ps: src/manual.ms src/macros.ms $(PROCESSED)

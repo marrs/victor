@@ -11,7 +11,7 @@
             char out[256];
             rewrite_fennel_err(out, sizeof(out),
                 "some other error", "foo.ms", 5);
-            expect_str_eq(out, "some other error");
+            expect_str_eq(out, "foo.ms:5: some other error");
         } tested;
 
         it("handles a block error on the first line") {
@@ -235,8 +235,8 @@
                 process_groff(groff_lua, fix_path);
                 capture_end(&cap, STDERR_FILENO);
                 remove(fix_path);
-                expect_str_eq(cap.buf,
-                    "[victor/groff] groff/orphan-endvic: orphan .ENDVIC\n");
+                expect_str_contains(cap.buf, "[victor/groff] groff/orphan-endvic:");
+                expect_str_contains(cap.buf, ":1: orphan .ENDVIC");
             } tested;
 
             it("writes warning to stderr for an unterminated .VIC block") {
@@ -247,8 +247,8 @@
                 process_groff(groff_lua, fix_path);
                 capture_end(&cap, STDERR_FILENO);
                 remove(fix_path);
-                expect_str_eq(cap.buf,
-                    "[victor/groff] groff/unterminated-vic: unterminated .VIC block\n");
+                expect_str_contains(cap.buf, "[victor/groff] groff/unterminated-vic:");
+                expect_str_contains(cap.buf, ":1: unterminated .VIC block");
             } tested;
 
             it("writes error to stderr when VIC block produces no string") {
@@ -259,8 +259,8 @@
                 process_groff(groff_lua, fix_path);
                 capture_end(&cap, STDERR_FILENO);
                 remove(fix_path);
-                expect_str_eq(cap.buf,
-                    "[victor/groff] groff/no-string: VIC block 0 produced no string\n");
+                expect_str_contains(cap.buf, "[victor/groff] groff/no-string:");
+                expect_str_contains(cap.buf, ":1: VIC block 0 produced no string");
             } tested;
 
             it("writes error to stderr when EPS file cannot be written") {

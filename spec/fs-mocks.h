@@ -9,11 +9,6 @@ struct Fs_Mock_State {
 
 Fs_Mock_State fs_mock;
 
-static void fs_mock_reset()
-{
-    fs_mock = {};
-}
-
 extern "C" FILE *fopen(const char *path, const char *mode)
 {
     typedef FILE *(*real_fopen_t)(const char *, const char *);

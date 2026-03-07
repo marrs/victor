@@ -107,122 +107,93 @@
             "Non-ASCII code point emits glyphshow with post table name")))
 
     (testing "path"
-      (fn path-svg [cmds ?attrs]
-        (let [node (if ?attrs [:path ?attrs] [:path])]
-          (each [_ cmd (ipairs cmds)] (table.insert node cmd))
+      (fn path-svg [attrs ...]
+        (let [node [:path attrs]]
+          (each [_ cmd (ipairs [...])] (table.insert node cmd))
           (bic.dsl {:target :svg} [:bic {:width 200 :height 100} node])))
 
-      (testing "produces a :path node with a d attribute"
-        (let [[issue result] (path-svg [[:move-abs {:x 10 :y 20}] [:close {}]])]
-          (is (nil? issue))
-          (is (= :path (?. result 3 1)))
-          (is (= "M 10 20 Z" (?. result 3 2 :d)))))
-
-      (testing "[:move-abs] emits absolute M command"
-        (let [[issue result] (path-svg [[:move-abs {:x 10 :y 20}]])]
+      (testing "{:x :y} inserts M as first d command"
+        (let [[issue result] (path-svg {:x 10 :y 20})]
           (is (nil? issue))
           (is (= "M 10 20" (?. result 3 2 :d)))))
 
-      (testing "[:move-rel] emits relative m command"
-        (let [[issue result] (path-svg [[:move-abs {:x 0 :y 0}] [:move-rel {:dx 5 :dy 10}]])]
+      (testing "[:move-to] emits relative m command"
+        (let [[issue result] (path-svg {:x 0 :y 0} [:move-to [5 10]])]
           (is (nil? issue))
           (is (= "M 0 0 m 5 10" (?. result 3 2 :d)))))
 
-      (testing "[:line-abs] emits absolute L command"
-        (let [[issue result] (path-svg [[:move-abs {:x 0 :y 0}] [:line-abs {:x 50 :y 30}]])]
-          (is (nil? issue))
-          (is (= "M 0 0 L 50 30" (?. result 3 2 :d)))))
-
-      (testing "[:line-rel] emits relative l command"
-        (let [[issue result] (path-svg [[:move-abs {:x 0 :y 0}] [:line-rel {:dx 10 :dy 5}]])]
+      (testing "[:line-to] emits relative l command"
+        (let [[issue result] (path-svg {:x 0 :y 0} [:line-to [10 5]])]
           (is (nil? issue))
           (is (= "M 0 0 l 10 5" (?. result 3 2 :d)))))
 
-      (testing "[:curve-abs] emits absolute C command"
-        (let [[issue result] (path-svg [[:move-abs {:x 0 :y 0}]
-                                        [:curve-abs {:x1 10 :y1 20 :x2 30 :y2 40 :x 50 :y 0}]])]
-          (is (nil? issue))
-          (is (= "M 0 0 C 10 20 30 40 50 0" (?. result 3 2 :d)))))
-
-      (testing "[:curve-rel] emits relative c command"
-        (let [[issue result] (path-svg [[:move-abs {:x 0 :y 0}]
-                                        [:curve-rel {:dx1 10 :dy1 20 :dx2 30 :dy2 40 :dx 50 :dy 0}]])]
+      (testing "[:curve-to] emits relative c command"
+        (let [[issue result] (path-svg {:x 0 :y 0}
+                                       [:curve-to [10 20] [30 40] [50 0]])]
           (is (nil? issue))
           (is (= "M 0 0 c 10 20 30 40 50 0" (?. result 3 2 :d)))))
 
-      (testing "[:quad-abs] emits absolute Q command"
-        (let [[issue result] (path-svg [[:move-abs {:x 0 :y 0}]
-                                        [:quad-abs {:x1 25 :y1 50 :x 50 :y 0}]])]
-          (is (nil? issue))
-          (is (= "M 0 0 Q 25 50 50 0" (?. result 3 2 :d)))))
-
-      (testing "[:quad-rel] emits relative q command"
-        (let [[issue result] (path-svg [[:move-abs {:x 0 :y 0}]
-                                        [:quad-rel {:dx1 25 :dy1 50 :dx 50 :dy 0}]])]
+      (testing "[:quad-to] emits relative q command"
+        (let [[issue result] (path-svg {:x 0 :y 0}
+                                       [:quad-to [25 50] [50 0]])]
           (is (nil? issue))
           (is (= "M 0 0 q 25 50 50 0" (?. result 3 2 :d)))))
 
-      (testing "[:arc-abs] emits absolute A command"
-        (let [[issue result] (path-svg [[:move-abs {:x 10 :y 0}]
-                                        [:arc-abs {:rx 20 :ry 20 :rot 0 :large-arc 0 :sweep 1 :x 50 :y 0}]])]
-          (is (nil? issue))
-          (is (= "M 10 0 A 20 20 0 0 1 50 0" (?. result 3 2 :d)))))
-
-      (testing "[:arc-rel] emits relative a command"
-        (let [[issue result] (path-svg [[:move-abs {:x 10 :y 0}]
-                                        [:arc-rel {:rx 20 :ry 20 :rot 0 :large-arc 0 :sweep 1 :dx 40 :dy 0}]])]
+      (testing "[:arc-to] emits relative a command"
+        (let [[issue result] (path-svg {:x 10 :y 0}
+                                       [:arc-to {:rx 20 :ry 20 :rot 0 :large-arc 0 :sweep 1 :dx 40 :dy 0}])]
           (is (nil? issue))
           (is (= "M 10 0 a 20 20 0 0 1 40 0" (?. result 3 2 :d)))))
 
       (testing "[:close] emits Z command"
-        (let [[issue result] (path-svg [[:move-abs {:x 10 :y 20}]
-                                        [:line-abs {:x 50 :y 20}]
-                                        [:close {}]])]
+        (let [[issue result] (path-svg {:x 10 :y 20}
+                                       [:line-to [40 0]]
+                                       [:close {}])]
           (is (nil? issue))
-          (is (= "M 10 20 L 50 20 Z" (?. result 3 2 :d)))))
+          (is (= "M 10 20 l 40 0 Z" (?. result 3 2 :d)))))
 
       (testing "stroke attribute is passed through"
-        (let [[issue result] (path-svg [[:move-abs {:x 0 :y 0}]] {:stroke "black"})]
+        (let [[issue result] (path-svg {:x 0 :y 0 :stroke "black"})]
           (is (nil? issue))
           (is (= "black" (?. result 3 2 :stroke)))))
 
       (testing "stroke-width attribute is passed through"
-        (let [[issue result] (path-svg [[:move-abs {:x 0 :y 0}]] {:stroke-width 2})]
+        (let [[issue result] (path-svg {:x 0 :y 0 :stroke-width 2})]
           (is (nil? issue))
           (is (= 2 (?. result 3 2 :stroke-width)))))
 
       (testing "fill attribute is passed through"
-        (let [[issue result] (path-svg [[:move-abs {:x 0 :y 0}]] {:fill "red"})]
+        (let [[issue result] (path-svg {:x 0 :y 0 :fill "red"})]
           (is (nil? issue))
           (is (= "red" (?. result 3 2 :fill)))))
 
       (testing ":stroke-cap :butt sets stroke-linecap to butt"
-        (let [[issue result] (path-svg [[:move-abs {:x 0 :y 0}]] {:stroke-cap :butt})]
+        (let [[issue result] (path-svg {:x 0 :y 0 :stroke-cap :butt})]
           (is (nil? issue))
           (is (= :butt (?. result 3 2 :stroke-linecap)))))
 
       (testing ":stroke-cap :round sets stroke-linecap to round"
-        (let [[issue result] (path-svg [[:move-abs {:x 0 :y 0}]] {:stroke-cap :round})]
+        (let [[issue result] (path-svg {:x 0 :y 0 :stroke-cap :round})]
           (is (nil? issue))
           (is (= :round (?. result 3 2 :stroke-linecap)))))
 
       (testing ":stroke-cap :square sets stroke-linecap to square"
-        (let [[issue result] (path-svg [[:move-abs {:x 0 :y 0}]] {:stroke-cap :square})]
+        (let [[issue result] (path-svg {:x 0 :y 0 :stroke-cap :square})]
           (is (nil? issue))
           (is (= :square (?. result 3 2 :stroke-linecap)))))
 
       (testing ":stroke-cap :none omits stroke-linecap"
-        (let [[issue result] (path-svg [[:move-abs {:x 0 :y 0}]] {:stroke-cap :none})]
+        (let [[issue result] (path-svg {:x 0 :y 0 :stroke-cap :none})]
           (is (nil? issue))
           (is (= nil (?. result 3 2 :stroke-linecap)))))
 
       (testing "unset :stroke-cap omits stroke-linecap"
-        (let [[issue result] (path-svg [[:move-abs {:x 0 :y 0}]])]
+        (let [[issue result] (path-svg {:x 0 :y 0})]
           (is (nil? issue))
           (is (= nil (?. result 3 2 :stroke-linecap)))))
 
       (testing "unsupported :stroke-cap value omits stroke-linecap"
-        (let [[issue result] (path-svg [[:move-abs {:x 0 :y 0}]] {:stroke-cap :miter})]
+        (let [[issue result] (path-svg {:x 0 :y 0 :stroke-cap :miter})]
           (is (nil? issue))
           (is (= nil (?. result 3 2 :stroke-linecap))))))
 
@@ -335,9 +306,9 @@
       )
 
     (testing "path"
-      (fn path-eps [cmds ?attrs]
-        (let [node (if ?attrs [:path ?attrs] [:path])]
-          (each [_ cmd (ipairs cmds)] (table.insert node cmd))
+      (fn path-eps [attrs ...]
+        (let [node [:path attrs]]
+          (each [_ cmd (ipairs [...])] (table.insert node cmd))
           (bic.dsl {:target :eps} [:bic {:width 200 :height 100} node])))
 
       (fn has-op? [result tag]
@@ -349,13 +320,13 @@
           (when (= tag (. node 1)) node)))
 
       (testing "wraps path commands in newpath and stroke"
-        (let [[issue result] (path-eps [[:move-abs {:x 10 :y 20}] [:close {}]])]
+        (let [[issue result] (path-eps {:x 10 :y 20} [:close {}])]
           (is (nil? issue))
           (is (= :newpath (?. result 4 1)))
           (is (= :stroke (. (. result (- (length result) 1)) 1)))))
 
-      (testing "[:move-abs] emits moveto with Y-flip"
-        (let [[issue result] (path-eps [[:move-abs {:x 10 :y 20}]])]
+      (testing "{:x :y} emits moveto as first command with Y-flip"
+        (let [[issue result] (path-eps {:x 10 :y 20})]
           (is (nil? issue))
           (is (deep= [:eps {:width 200 :height 100}
                       [:gsave]
@@ -365,138 +336,106 @@
                       [:grestore]]
                      result))))
 
-      (testing "[:move-rel] emits rmoveto with negated dy"
-        (let [[issue result] (path-eps [[:move-abs {:x 0 :y 0}] [:move-rel {:dx 5 :dy 10}]])]
+      (testing "[:move-to] emits rmoveto with negated dy"
+        (let [[issue result] (path-eps {:x 0 :y 0} [:move-to [5 10]])]
           (is (nil? issue))
           (is (deep= [:rmoveto {:dx 5 :dy -10}] (. result 6)))))
 
-      (testing "[:line-abs] emits lineto with Y-flip"
-        (let [[issue result] (path-eps [[:move-abs {:x 0 :y 0}] [:line-abs {:x 50 :y 30}]])]
-          (is (nil? issue))
-          (is (deep= [:lineto {:x 50 :y 70}] (. result 6)))))
-
-      (testing "[:line-rel] emits rlineto with negated dy"
-        (let [[issue result] (path-eps [[:move-abs {:x 0 :y 0}] [:line-rel {:dx 10 :dy 5}]])]
+      (testing "[:line-to] emits rlineto with negated dy"
+        (let [[issue result] (path-eps {:x 0 :y 0} [:line-to [10 5]])]
           (is (nil? issue))
           (is (deep= [:rlineto {:dx 10 :dy -5}] (. result 6)))))
 
-      (testing "[:curve-abs] emits curveto with Y-flip on all y coordinates"
-        (let [[issue result] (path-eps [[:move-abs {:x 0 :y 0}]
-                                        [:curve-abs {:x1 10 :y1 20 :x2 30 :y2 40 :x 50 :y 0}]])]
-          (is (nil? issue))
-          (is (deep= [:curveto {:x1 10 :y1 80 :x2 30 :y2 60 :x3 50 :y3 100}] (. result 6)))))
-
-      (testing "[:curve-rel] emits rcurveto with negated dy values"
-        (let [[issue result] (path-eps [[:move-abs {:x 0 :y 0}]
-                                        [:curve-rel {:dx1 10 :dy1 20 :dx2 30 :dy2 40 :dx 50 :dy 0}]])]
+      (testing "[:curve-to] emits rcurveto with negated dy values"
+        (let [[issue result] (path-eps {:x 0 :y 0}
+                                       [:curve-to [10 20] [30 40] [50 0]])]
           (is (nil? issue))
           (is (deep= [:rcurveto {:dx1 10 :dy1 -20 :dx2 30 :dy2 -40 :dx3 50 :dy3 0}] (. result 6)))))
 
-      (testing "[:quad-abs] converts quadratic bezier to cubic curveto"
-        ;; P0=(0,0) P1=(30,30) P2=(60,0) → C1=(20,20) C2=(40,20) in SVG space
-        ;; Y-flipped (h=100): C1y=80 C2y=80 P2y=100
-        (let [[issue result] (path-eps [[:move-abs {:x 0 :y 0}]
-                                        [:quad-abs {:x1 30 :y1 30 :x 60 :y 0}]])]
-          (is (nil? issue))
-          (is (deep= [:curveto {:x1 20 :y1 80 :x2 40 :y2 80 :x3 60 :y3 100}] (. result 6)))))
-
-      (testing "[:quad-rel] converts relative quadratic bezier to rcurveto"
-        ;; from P0=(0,0): dx1=30 dy1=30 dx=60 dy=0
-        ;; C1 = 2/3*(30,30) = (20,20), C2 = (60,0)+2/3*((30,30)-(60,0)) = (40,20)
-        ;; relative rcurveto: dx1=20 dy1=-20 dx2=40 dy2=-20 dx3=60 dy3=0
-        (let [[issue result] (path-eps [[:move-abs {:x 0 :y 0}]
-                                        [:quad-rel {:dx1 30 :dy1 30 :dx 60 :dy 0}]])]
+      (testing "[:quad-to] converts quadratic bezier to rcurveto"
+        ;; from P0=(0,0): dx1=30 dy1=30 dx2=60 dy2=0
+        ;; dc1=(20,20), dc2=((60+60)/3,(0+60)/3)=(40,20)
+        ;; rcurveto: dx1=20 dy1=-20 dx2=40 dy2=-20 dx3=60 dy3=0
+        (let [[issue result] (path-eps {:x 0 :y 0}
+                                       [:quad-to [30 30] [60 0]])]
           (is (nil? issue))
           (is (deep= [:rcurveto {:dx1 20 :dy1 -20 :dx2 40 :dy2 -20 :dx3 60 :dy3 0}] (. result 6)))))
 
-      (testing "[:arc-abs] decomposes arc into curveto sequence"
-        (let [[issue result] (path-eps [[:move-abs {:x 0 :y 50}]
-                                        [:arc-abs {:rx 50 :ry 50 :rot 0 :large-arc 0 :sweep 1
-                                                   :x 100 :y 50}]])]
-          (is (nil? issue))
-          (is (has-op? result :curveto))))
-
-      (testing "[:arc-rel] decomposes relative arc into curveto sequence"
-        (let [[issue result] (path-eps [[:move-abs {:x 0 :y 50}]
-                                        [:arc-rel {:rx 50 :ry 50 :rot 0 :large-arc 0 :sweep 1
-                                                   :dx 100 :dy 0}]])]
+      (testing "[:arc-to] decomposes arc into curveto sequence"
+        (let [[issue result] (path-eps {:x 0 :y 50}
+                                       [:arc-to {:rx 50 :ry 50 :rot 0 :large-arc 0 :sweep 1
+                                                 :dx 100 :dy 0}])]
           (is (nil? issue))
           (is (has-op? result :curveto))))
 
       (testing "[:close] emits closepath"
-        (let [[issue result] (path-eps [[:move-abs {:x 10 :y 20}]
-                                        [:line-abs {:x 50 :y 20}]
-                                        [:close {}]])]
+        (let [[issue result] (path-eps {:x 10 :y 20} [:close {}])]
           (is (nil? issue))
           (is (has-op? result :closepath))))
 
       (testing "fill attribute emits fill before stroke"
-        (let [[issue result] (path-eps [[:move-abs {:x 0 :y 0}] [:close {}]] {:fill "black"})]
+        (let [[issue result] (path-eps {:x 0 :y 0 :fill "black"} [:close {}])]
           (is (nil? issue))
           (is (has-op? result :fill))
           (is (has-op? result :stroke))))
 
       (testing "fill without stroke emits only fill"
-        (let [[issue result] (path-eps [[:move-abs {:x 0 :y 0}] [:close {}]]
-                                       {:fill "black" :stroke "none"})]
+        (let [[issue result] (path-eps {:x 0 :y 0 :fill "black" :stroke "none"} [:close {}])]
           (is (nil? issue))
           (is (has-op? result :fill))
           (is (not (has-op? result :stroke)))))
 
       (testing "stroke color is isolated to :path operation"
-        (let [[issue result] (path-eps [[:move-abs {:x 0 :y 0}] [:close {}]]
-                                       {:stroke "red"})]
+        (let [[issue result] (path-eps {:x 0 :y 0 :stroke "red"} [:close {}])]
           (is (nil? issue))
           (is (= :gsave (?. result 3 1)))
           (is (= :grestore (. (. result (length result)) 1)))))
 
       (testing "stroke-width is isolated to :path operation"
-        (let [[issue result] (path-eps [[:move-abs {:x 0 :y 0}] [:close {}]]
-                                       {:stroke-width 5})]
+        (let [[issue result] (path-eps {:x 0 :y 0 :stroke-width 5} [:close {}])]
           (is (nil? issue))
           (is (= :gsave (?. result 3 1)))
           (is (= :grestore (. (. result (length result)) 1)))))
 
       (testing "fill color is isolated to :path operation"
-        (let [[issue result] (path-eps [[:move-abs {:x 0 :y 0}] [:close {}]]
-                                       {:fill "black"})]
+        (let [[issue result] (path-eps {:x 0 :y 0 :fill "black"} [:close {}])]
           (is (nil? issue))
           (is (= :gsave (?. result 3 1)))
           (is (= :grestore (. (. result (length result)) 1)))))
 
       (testing "plain path is always isolated"
-        (let [[issue result] (path-eps [[:move-abs {:x 0 :y 0}] [:close {}]])]
+        (let [[issue result] (path-eps {:x 0 :y 0} [:close {}])]
           (is (nil? issue))
           (is (= :gsave (?. result 3 1)))
           (is (= :grestore (. (. result (length result)) 1)))))
 
       (testing ":stroke-cap :butt emits 0 setlinecap"
-        (let [[issue result] (path-eps [[:move-abs {:x 0 :y 0}]] {:stroke-cap :butt})]
+        (let [[issue result] (path-eps {:x 0 :y 0 :stroke-cap :butt})]
           (is (nil? issue))
           (is (deep= [:setlinecap {:cap 0}] (find-op result :setlinecap)))))
 
       (testing ":stroke-cap :round emits 1 setlinecap"
-        (let [[issue result] (path-eps [[:move-abs {:x 0 :y 0}]] {:stroke-cap :round})]
+        (let [[issue result] (path-eps {:x 0 :y 0 :stroke-cap :round})]
           (is (nil? issue))
           (is (deep= [:setlinecap {:cap 1}] (find-op result :setlinecap)))))
 
       (testing ":stroke-cap :square emits 2 setlinecap"
-        (let [[issue result] (path-eps [[:move-abs {:x 0 :y 0}]] {:stroke-cap :square})]
+        (let [[issue result] (path-eps {:x 0 :y 0 :stroke-cap :square})]
           (is (nil? issue))
           (is (deep= [:setlinecap {:cap 2}] (find-op result :setlinecap)))))
 
       (testing ":stroke-cap :none omits setlinecap"
-        (let [[issue result] (path-eps [[:move-abs {:x 0 :y 0}]] {:stroke-cap :none})]
+        (let [[issue result] (path-eps {:x 0 :y 0 :stroke-cap :none})]
           (is (nil? issue))
           (is (not (has-op? result :setlinecap)))))
 
       (testing "unset :stroke-cap omits setlinecap"
-        (let [[issue result] (path-eps [[:move-abs {:x 0 :y 0}]])]
+        (let [[issue result] (path-eps {:x 0 :y 0})]
           (is (nil? issue))
           (is (not (has-op? result :setlinecap)))))
 
       (testing "unsupported :stroke-cap value omits setlinecap"
-        (let [[issue result] (path-eps [[:move-abs {:x 0 :y 0}]] {:stroke-cap :miter})]
+        (let [[issue result] (path-eps {:x 0 :y 0 :stroke-cap :miter})]
           (is (nil? issue))
           (is (not (has-op? result :setlinecap))))))
 

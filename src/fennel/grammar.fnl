@@ -38,6 +38,8 @@
 
 (local path
   [:map
+   [:x            measurement]
+   [:y            measurement]
    [:fill         {:optional true} string?]
    [:stroke       {:optional true} string?]
    [:stroke-width {:optional true} measurement]

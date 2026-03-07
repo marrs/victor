@@ -141,22 +141,23 @@
 
    :path
    (let [path-d
-         (fn [cmds]
-           (let [parts []]
+         (fn [xx yy cmds]
+           (let [parts [(.. "M " xx " " yy)]]
              (each [_ cmd (ipairs cmds)]
                (let [tag (. cmd 1) aa (. cmd 2)]
                  (match tag
-                   :move-abs  (table.insert parts (.. "M " aa.x " " aa.y))
-                   :move-rel  (table.insert parts (.. "m " aa.dx " " aa.dy))
-                   :line-abs  (table.insert parts (.. "L " aa.x " " aa.y))
-                   :line-rel  (table.insert parts (.. "l " aa.dx " " aa.dy))
-                   :curve-abs (table.insert parts (.. "C " aa.x1 " " aa.y1 " " aa.x2 " " aa.y2 " " aa.x " " aa.y))
-                   :curve-rel (table.insert parts (.. "c " aa.dx1 " " aa.dy1 " " aa.dx2 " " aa.dy2 " " aa.dx " " aa.dy))
-                   :quad-abs  (table.insert parts (.. "Q " aa.x1 " " aa.y1 " " aa.x " " aa.y))
-                   :quad-rel  (table.insert parts (.. "q " aa.dx1 " " aa.dy1 " " aa.dx " " aa.dy))
-                   :arc-abs   (table.insert parts (.. "A " aa.rx " " aa.ry " " aa.rot " " aa.large-arc " " aa.sweep " " aa.x " " aa.y))
-                   :arc-rel   (table.insert parts (.. "a " aa.rx " " aa.ry " " aa.rot " " aa.large-arc " " aa.sweep " " aa.dx " " aa.dy))
-                   :close     (table.insert parts "Z"))))
+                   :move-to  (table.insert parts (.. "m " (. aa 1) " " (. aa 2)))
+                   :line-to  (table.insert parts (.. "l " (. aa 1) " " (. aa 2)))
+                   :curve-to (let [p1 (. cmd 2) p2 (. cmd 3) p3 (. cmd 4)]
+                               (table.insert parts (.. "c " (. p1 1) " " (. p1 2) " "
+                                                           (. p2 1) " " (. p2 2) " "
+                                                           (. p3 1) " " (. p3 2))))
+                   :quad-to  (let [p1 (. cmd 2) p2 (. cmd 3)]
+                               (table.insert parts (.. "q " (. p1 1) " " (. p1 2) " "
+                                                           (. p2 1) " " (. p2 2))))
+                   :arc-to   (table.insert parts (.. "a " aa.rx " " aa.ry " " aa.rot " "
+                                                       aa.large-arc " " aa.sweep " " aa.dx " " aa.dy))
+                   :close    (table.insert parts "Z"))))
              (table.concat parts " ")))
 
          arc->beziers
@@ -231,89 +232,50 @@
              segs))
 
          emit-eps-cmds
-         (fn [nodes height cmds]
-           (var cur-x 0)
-           (var cur-y 0)
-           (var has-point false)
+         (fn [nodes height xx yy cmds]
+           (var cur-x xx)
+           (var cur-y yy)
+           (table.insert nodes [:moveto {:x xx :y (eps-y height yy)}])
            (each [_ cmd (ipairs cmds)]
              (let [tag (. cmd 1) aa (. cmd 2)]
                (match tag
-                 :move-abs (do
-                             (table.insert nodes [:moveto {:x aa.x :y (eps-y height aa.y)}])
-                             (set cur-x aa.x)
-                             (set cur-y aa.y)
-                             (set has-point true))
-                 :move-rel (if (not has-point)
-                             ;; SVG rule: first m in a path is treated as absolute
-                             (do
-                               (table.insert nodes [:moveto {:x aa.dx :y (eps-y height aa.dy)}])
-                               (set cur-x aa.dx)
-                               (set cur-y aa.dy)
-                               (set has-point true))
-                             (do
-                               (table.insert nodes [:rmoveto {:dx aa.dx :dy (- aa.dy)}])
-                               (set cur-x (+ cur-x aa.dx))
-                               (set cur-y (+ cur-y aa.dy))))
-                 :line-abs (do
-                             (table.insert nodes [:lineto {:x aa.x :y (eps-y height aa.y)}])
-                             (set cur-x aa.x)
-                             (set cur-y aa.y))
-                 :line-rel (do
-                             (table.insert nodes [:rlineto {:dx aa.dx :dy (- aa.dy)}])
-                             (set cur-x (+ cur-x aa.dx))
-                             (set cur-y (+ cur-y aa.dy)))
-                 :curve-abs (do
-                              (table.insert nodes [:curveto {:x1 aa.x1 :y1 (eps-y height aa.y1)
-                                                             :x2 aa.x2 :y2 (eps-y height aa.y2)
-                                                             :x3 aa.x  :y3 (eps-y height aa.y)}])
-                              (set cur-x aa.x)
-                              (set cur-y aa.y))
-                 :curve-rel (do
-                              (table.insert nodes [:rcurveto {:dx1 aa.dx1 :dy1 (- aa.dy1)
-                                                              :dx2 aa.dx2 :dy2 (- aa.dy2)
-                                                              :dx3 aa.dx  :dy3 (- aa.dy)}])
-                              (set cur-x (+ cur-x aa.dx))
-                              (set cur-y (+ cur-y aa.dy)))
-                 :quad-abs (let [;; P0=cur, P1=(x1,y1), P2=(x,y)
-                                 ;; C1 = P0 + 2/3*(P1-P0), C2 = P2 + 2/3*(P1-P2)
-                                 c1x (+ cur-x (* (/ 2 3) (- aa.x1 cur-x)))
-                                 c1y (+ cur-y (* (/ 2 3) (- aa.y1 cur-y)))
-                                 c2x (+ aa.x  (* (/ 2 3) (- aa.x1 aa.x)))
-                                 c2y (+ aa.y  (* (/ 2 3) (- aa.y1 aa.y)))]
-                             (table.insert nodes [:curveto {:x1 c1x :y1 (eps-y height c1y)
-                                                            :x2 c2x :y2 (eps-y height c2y)
-                                                            :x3 aa.x :y3 (eps-y height aa.y)}])
-                             (set cur-x aa.x)
-                             (set cur-y aa.y))
-                 :quad-rel (let [;; relative: dC1 = 2/3*(dx1,dy1)
-                                 ;;           dC2 = ((dx+2*dx1)/3, (dy+2*dy1)/3)
-                                 dc1x (* (/ 2 3) aa.dx1)
-                                 dc1y (* (/ 2 3) aa.dy1)
-                                 dc2x (/ (+ aa.dx (* 2 aa.dx1)) 3)
-                                 dc2y (/ (+ aa.dy (* 2 aa.dy1)) 3)]
-                             (table.insert nodes [:rcurveto {:dx1 dc1x :dy1 (- dc1y)
-                                                             :dx2 dc2x :dy2 (- dc2y)
-                                                             :dx3 aa.dx :dy3 (- aa.dy)}])
-                             (set cur-x (+ cur-x aa.dx))
-                             (set cur-y (+ cur-y aa.dy)))
-                 :arc-abs (let [segs (arc->beziers cur-x cur-y aa.rx aa.ry aa.rot aa.large-arc aa.sweep aa.x aa.y)]
-                            (each [_ seg (ipairs segs)]
-                              (table.insert nodes [:curveto {:x1 seg.x1 :y1 (eps-y height seg.y1)
-                                                             :x2 seg.x2 :y2 (eps-y height seg.y2)
-                                                             :x3 seg.x3 :y3 (eps-y height seg.y3)}]))
-                            (set cur-x aa.x)
-                            (set cur-y aa.y))
-                 :arc-rel (let [segs (arc->beziers cur-x cur-y aa.rx aa.ry aa.rot aa.large-arc aa.sweep
-                                                   (+ cur-x aa.dx) (+ cur-y aa.dy))]
-                            (each [_ seg (ipairs segs)]
-                              (table.insert nodes [:curveto {:x1 seg.x1 :y1 (eps-y height seg.y1)
-                                                             :x2 seg.x2 :y2 (eps-y height seg.y2)
-                                                             :x3 seg.x3 :y3 (eps-y height seg.y3)}]))
-                            (set cur-x (+ cur-x aa.dx))
-                            (set cur-y (+ cur-y aa.dy)))
+                 :move-to (do
+                            (table.insert nodes [:rmoveto {:dx (. aa 1) :dy (- (. aa 2))}])
+                            (set cur-x (+ cur-x (. aa 1)))
+                            (set cur-y (+ cur-y (. aa 2))))
+                 :line-to (do
+                            (table.insert nodes [:rlineto {:dx (. aa 1) :dy (- (. aa 2))}])
+                            (set cur-x (+ cur-x (. aa 1)))
+                            (set cur-y (+ cur-y (. aa 2))))
+                 :curve-to (let [p1 (. cmd 2) p2 (. cmd 3) p3 (. cmd 4)]
+                             (table.insert nodes [:rcurveto {:dx1 (. p1 1) :dy1 (- (. p1 2))
+                                                             :dx2 (. p2 1) :dy2 (- (. p2 2))
+                                                             :dx3 (. p3 1) :dy3 (- (. p3 2))}])
+                             (set cur-x (+ cur-x (. p3 1)))
+                             (set cur-y (+ cur-y (. p3 2))))
+                 :quad-to (let [p1 (. cmd 2) p2 (. cmd 3)
+                                dx1 (. p1 1) dy1 (. p1 2)
+                                dx2 (. p2 1) dy2 (. p2 2)
+                                dc1x (* (/ 2 3) dx1)
+                                dc1y (* (/ 2 3) dy1)
+                                dc2x (/ (+ dx2 (* 2 dx1)) 3)
+                                dc2y (/ (+ dy2 (* 2 dy1)) 3)]
+                            (table.insert nodes [:rcurveto {:dx1 dc1x :dy1 (- dc1y)
+                                                            :dx2 dc2x :dy2 (- dc2y)
+                                                            :dx3 dx2  :dy3 (- dy2)}])
+                            (set cur-x (+ cur-x dx2))
+                            (set cur-y (+ cur-y dy2)))
+                 :arc-to (let [segs (arc->beziers cur-x cur-y aa.rx aa.ry aa.rot aa.large-arc aa.sweep
+                                                  (+ cur-x aa.dx) (+ cur-y aa.dy))]
+                           (each [_ seg (ipairs segs)]
+                             (table.insert nodes [:curveto {:x1 seg.x1 :y1 (eps-y height seg.y1)
+                                                            :x2 seg.x2 :y2 (eps-y height seg.y2)
+                                                            :x3 seg.x3 :y3 (eps-y height seg.y3)}]))
+                           (set cur-x (+ cur-x aa.dx))
+                           (set cur-y (+ cur-y aa.dy)))
                  :close (table.insert nodes [:closepath])))))]
      {:svg (fn [attrs _ctx]
-             [nil [[:path {:d            (path-d attrs.d)
+             [nil [[:path {:d            (path-d attrs.x attrs.y attrs.d)
                            :fill         attrs.fill
                            :stroke       attrs.stroke
                            :stroke-width attrs.stroke-width
@@ -330,13 +292,13 @@
                (table.insert nodes [:gsave])
                (when do-fill
                  (table.insert nodes [:newpath])
-                 (emit-eps-cmds nodes height attrs.d)
+                 (emit-eps-cmds nodes height attrs.x attrs.y attrs.d)
                  (when (. named-colors attrs.fill)
                    (table.insert nodes [:setrgbcolor (. named-colors attrs.fill)]))
                  (table.insert nodes [:fill]))
                (when do-stroke
                  (table.insert nodes [:newpath])
-                 (emit-eps-cmds nodes height attrs.d)
+                 (emit-eps-cmds nodes height attrs.x attrs.y attrs.d)
                  (when (and attrs.stroke (. named-colors attrs.stroke))
                    (table.insert nodes [:setrgbcolor (. named-colors attrs.stroke)]))
                  (when attrs.stroke-width

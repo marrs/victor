@@ -48,46 +48,41 @@ Bic also supports paths
 .(codex
 (local bic (require :src.fennel.bic))
 (bic.render [:bic {:width 300 :height 100}
-             [:path [:move-abs {:x 50 :y 10}]
-                    [:line-abs {:x 90 :y 55}]
-                    [:line-abs {:x 50 :y 90}]
-                    [:line-abs {:x 10 :y 55}]
+             [:path {:x 50 :y 10}
+                    [:line-to [ 40  45]]
+                    [:line-to [-40  35]]
+                    [:line-to [-40 -35]]
                     [:close {}]]
-             [:path [:move-abs {:x 110 :y 80}]
-                    [:curve-abs {:x1 120 :y1 10 :x2 180 :y2 10 :x 190 :y 80}]]
-             [:path [:move-abs {:x 210 :y 50}]
-                    [:arc-abs {:rx 40 :ry 40 :rot 0 :large-arc 0 :sweep 0
-                               :x 290 :y 50}]
-                    [:quad-abs {:x1 250 :y1 90 :x 210 :y 50}]]
-             ])
+             [:path {:x 110 :y 80}
+                    [:curve-to [10 -70] [70 -70] [80 0]]]
+             [:path {:x 210 :y 50}
+                    [:arc-to {:rx 40 :ry 40
+                              :rot 0 :large-arc 0 :sweep 0
+                              :dx 80 :dy 0}]
+                    [:quad-to [-40 40] [-80 0]]]])
 .)codex
 Paths can be given different stroke colours and widths
 .(codex
 (local bic (require :src.fennel.bic))
 (bic.render [:bic {:width 300 :height 100}
-             [:path {:stroke :blue}
-               [:move-abs {:x 50 :y 10}]
-               [:line-abs {:x 90 :y 55}]
-               [:line-abs {:x 50 :y 90}]
-               [:line-abs {:x 10 :y 55}]
+             [:path {:stroke :blue :x 50 :y 10}
+               [:line-to [ 40  45]]
+               [:line-to [-40  35]]
+               [:line-to [-40 -35]]
                [:close {}]]
-             [:path {:stroke :red :stroke-width 10}
-               [:move-abs {:x 110 :y 80}]
-               [:curve-abs {:x1 120 :y1 10 :x2 180 :y2 10 :x 190 :y 80}]]
-             [:path {:stroke-width 5}
-               [:move-abs {:x 210 :y 50}]
-               [:arc-abs {:rx 40 :ry 40 :rot 0 :large-arc 0 :sweep 0
-                          :x 290 :y 50}]
-               [:quad-abs {:x1 250 :y1 90 :x 210 :y 50}]]
-             ])
+             [:path {:stroke :red :stroke-width 10 :x 110 :y 80}
+               [:curve-to [10 -70] [70 -70] [80 0]]]
+             [:path {:stroke-width 5 :x 210 :y 50}
+               [:arc-to {:rx 40 :ry 40 :rot 0 :large-arc 0 :sweep 0
+                         :dx 80 :dy 0}]
+               [:quad-to [-40 40] [-80 0]]]])
 .)codex
 Path strokes can be capped
 .(codex
 (local bic (require :src.fennel.bic))
 (fn arc [{:x x :y y :cap cap}]
-  [:path {:stroke :red :stroke-width 10 :stroke-cap cap}
-    [:move-abs {:x x :y y}]
-    [:curve-rel {:dx1 0 :dy1 100 :dx2 80 :dy2 100 :dx 80 :dy 0}]])
+  [:path {:stroke :red :stroke-width 10 :stroke-cap cap :x x :y y}
+    [:curve-to [0 100] [80 100] [80 0]]])
 
 (bic.render [:bic {:width 400 :height 100}
              (arc   {:x 0   :y 0   :cap :none})
@@ -103,11 +98,10 @@ Path strokes can be capped
 .(codex
 (local bic (require :src.fennel.bic))
 (fn smile [{:x x :y y :cap cap}]
-  [:path {:stroke-width 5 :stroke-cap cap}
-               [:move-abs {:x x :y y}]
-               [:arc-rel {:rx 40 :ry 40 :rot 0 :large-arc 0 :sweep 0
-                          :dx 80 :dy 0}]
-               [:quad-rel {:dx1 -40 :dy1 40 :dx -80 :dy 0}]
+  [:path {:stroke-width 5 :stroke-cap cap :x x :y y}
+               [:arc-to {:rx 40 :ry 40 :rot 0 :large-arc 0 :sweep 0
+                         :dx 80 :dy 0}]
+               [:quad-to [-40 40] [-80 0]]
                [:close {}]])
 
 (bic.render [:bic {:width 400 :height 100}
@@ -118,6 +112,5 @@ Path strokes can be capped
              (smile {:x 200 :y 0 :cap :round})
              [:text {:x 225 :y 70 :str ":round"}]
              (smile {:x 300 :y 0 :cap :square})
-             [:text {:x 325 :y 70 :str ":square"}]
-             ])
+             [:text {:x 325 :y 70 :str ":square"}]])
 .)codex

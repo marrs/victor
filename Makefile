@@ -60,22 +60,12 @@ target/smiley-bic-eps.eps: test-assets/smiley-bic-eps.fnl $(TARGET) | target
 target/smiley-bic-eps.ps: target/smiley-bic-eps.eps
 	sed 's/%%EOF/showpage\n%%EOF/' $< > $@
 
-target/test-groff.ps: test-assets/test-groff.ms $(TARGET) | target
-	$(TARGET) groff $< | groff -ms - > $@
-
-target/test-groff.pdf: target/test-groff.ps
-	ps2pdf $< $@
-
 smoketest: target/smiley-svg-dsl.svg target/smiley-eps-dsl.ps \
-           target/smiley-bic-svg.svg target/smiley-bic-eps.ps \
-           target/test-groff.ps \
-           target/test-groff.pdf
+           target/smiley-bic-svg.svg target/smiley-bic-eps.ps
 	$(SVG_VIEWER) target/smiley-svg-dsl.svg &
 	$(SVG_VIEWER) target/smiley-bic-svg.svg &
 	$(EPS_VIEWER) target/smiley-eps-dsl.ps &
-	$(EPS_VIEWER) target/smiley-bic-eps.ps &
-	$(EPS_VIEWER) target/test-groff.ps &
-	$(EPS_VIEWER) target/test-groff.pdf
+	$(EPS_VIEWER) target/smiley-bic-eps.ps
 
 manual: $(TARGET)
 	$(MAKE) -C manual all

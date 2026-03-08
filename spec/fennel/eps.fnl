@@ -45,6 +45,65 @@
 
   (testing "glyphshow emits named glyph operator"
     (is (= (eps.str [:glyphshow {:name "u1F642"}])
-           "/u1F642 glyphshow"))))
+           "/u1F642 glyphshow")))
+
+  (testing "language spec"
+    (testing "zero-arg operators"
+      (is (= (eps.str [:fill])        "fill")        "fill")
+      (is (= (eps.str [:eofill])      "eofill")      "eofill")
+      (is (= (eps.str [:newpath])     "newpath")     "newpath")
+      (is (= (eps.str [:closepath])   "closepath")   "closepath")
+      (is (= (eps.str [:clip])        "clip")        "clip")
+      (is (= (eps.str [:gsave])       "gsave")       "gsave")
+      (is (= (eps.str [:grestore])    "grestore")    "grestore")
+      (is (= (eps.str [:showpage])    "showpage")    "showpage")
+      (is (= (eps.str [:flattenpath]) "flattenpath") "flattenpath")
+      (is (= (eps.str [:strokepath])  "strokepath")  "strokepath"))
+
+    (testing "path construction"
+      (is (= (eps.str [:lineto {:x 30 :y 40}]) "30 40 lineto")
+          "lineto emits x y lineto")
+      (is (= (eps.str [:rmoveto {:dx 5 :dy -10}]) "5 -10 rmoveto")
+          "rmoveto emits dx dy rmoveto")
+      (is (= (eps.str [:rlineto {:dx 10 :dy 0}]) "10 0 rlineto")
+          "rlineto emits dx dy rlineto")
+      (is (= (eps.str [:curveto {:x1 10 :y1 20 :x2 30 :y2 40 :x3 50 :y3 60}])
+             "10 20 30 40 50 60 curveto")
+          "curveto emits x1 y1 x2 y2 x3 y3 curveto")
+      (is (= (eps.str [:rcurveto {:dx1 1 :dy1 -2 :dx2 3 :dy2 -4 :dx3 5 :dy3 0}])
+             "1 -2 3 -4 5 0 rcurveto")
+          "rcurveto emits dx1 dy1 dx2 dy2 dx3 dy3 rcurveto")
+      (is (= (eps.str [:arc {:cx 50 :cy 50 :r 40 :a1 0 :a2 180}])
+             "50 50 40 0 180 arc")
+          "arc emits cx cy r a1 a2 arc")
+      (is (= (eps.str [:arcn {:cx 50 :cy 50 :r 40 :a1 180 :a2 0}])
+             "50 50 40 180 0 arcn")
+          "arcn emits cx cy r a1 a2 arcn"))
+
+    (testing "graphics state"
+      (is (= (eps.str [:setgray {:v 0.5}]) "0.5 setgray")
+          "setgray emits v setgray")
+      (is (= (eps.str [:setlinecap {:cap 1}]) "1 setlinecap")
+          "setlinecap emits cap setlinecap")
+      (is (= (eps.str [:setlinejoin {:join 2}]) "2 setlinejoin")
+          "setlinejoin emits join setlinejoin")
+      (is (= (eps.str [:setmiterlimit {:limit 10}]) "10 setmiterlimit")
+          "setmiterlimit emits limit setmiterlimit")
+      (is (= (eps.str [:setdash {:array "[5 3]" :offset 0}]) "[5 3] 0 setdash")
+          "setdash emits array offset setdash"))
+
+    (testing "transforms"
+      (is (= (eps.str [:translate {:tx 10 :ty 20}]) "10 20 translate")
+          "translate emits tx ty translate")
+      (is (= (eps.str [:rotate {:angle 45}]) "45 rotate")
+          "rotate emits angle rotate")
+      (is (= (eps.str [:scale {:sx 2 :sy 0.5}]) "2 0.5 scale")
+          "scale emits sx sy scale"))
+
+    (testing "rectangles"
+      (is (= (eps.str [:rectfill {:x 10 :y 20 :w 100 :h 50}]) "10 20 100 50 rectfill")
+          "rectfill emits x y w h rectfill")
+      (is (= (eps.str [:rectstroke {:x 10 :y 20 :w 100 :h 50}]) "10 20 100 50 rectstroke")
+          "rectstroke emits x y w h rectstroke"))))
 
 (run-tests)
